@@ -672,3 +672,21 @@ def permutation_null(observations: Sequence[Observation], *, size_buckets: int,
                                      size_control=size_control, seed=seed)
     index = build_index(shuffled, size_control=size_control, size_buckets=size_buckets)
     return calibration(mine_pairs(index, min_support=min_support, min_cell=min_cell))
+
+
+def permutation_null_triples(observations: Sequence[Observation], *, size_buckets: int,
+                             size_control: bool = True, min_support: int = 30,
+                             min_support_triple: int = 25, min_cell: int = 5,
+                             seed: int = 0) -> Calibration:
+    """Lo mismo para los tríos, que usan el mismo estimador pero otra búsqueda.
+
+    Va aparte porque cuesta lo suyo: son dos minerías completas de tríos. Que el control
+    valga para los pares no lo hace válido para los tríos, donde el candidato se elige
+    entre muchos menos y con soporte más fino, así que se comprueba por separado.
+    """
+    shuffled = permute_within_strata(observations, size_buckets=size_buckets,
+                                     size_control=size_control, seed=seed)
+    index = build_index(shuffled, size_control=size_control, size_buckets=size_buckets)
+    pairs = mine_pairs(index, min_support=min_support, min_cell=min_cell)
+    return calibration(mine_triples(index, pairs, min_support=min_support_triple,
+                                    min_cell=min_cell))

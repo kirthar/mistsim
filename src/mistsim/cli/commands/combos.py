@@ -81,12 +81,18 @@ def cmd_combos(args: argparse.Namespace) -> int:
     checks = rules.check_rules(pairs, min_support=args.min_support)
     patterns = mining.pattern_summary(pairs, rules.mechanical_groups())
 
-    permutation = None
+    permutation = triple_null = None
     if not args.no_permutation:
         permutation = mining.permutation_null(
             observations, size_buckets=buckets,
             size_control=not args.no_size_control,
             min_support=args.min_support, min_cell=args.min_cell)
+        if triples:
+            triple_null = mining.permutation_null_triples(
+                observations, size_buckets=buckets,
+                size_control=not args.no_size_control,
+                min_support=args.min_support,
+                min_support_triple=args.min_support_triple, min_cell=args.min_cell)
 
     replication = None
     if not args.no_replication:
@@ -100,7 +106,8 @@ def cmd_combos(args: argparse.Namespace) -> int:
                          size_control=not args.no_size_control, top=args.top,
                          min_support=args.min_support, replication=replication,
                          computed_triples=not args.no_triples, tuning=trace,
-                         patterns=patterns, permutation=permutation)
+                         patterns=patterns, permutation=permutation,
+                         triple_null=triple_null)
     print(text)
 
     if args.json:

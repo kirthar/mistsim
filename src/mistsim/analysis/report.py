@@ -223,7 +223,7 @@ def pairs_section(pairs: Sequence[PairResult], top: int, min_support: int) -> li
     return lines
 
 
-def triples_section(triples: Sequence[TripleResult], top: int) -> list[str]:
+def triples_section(triples: Sequence[TripleResult], top: int, null=None) -> list[str]:
     lines = [
         RULE,
         "TRÍOS — lift del corte más débil",
@@ -233,6 +233,15 @@ def triples_section(triples: Sequence[TripleResult], top: int) -> list[str]:
         "de sus tres pares, y no por arrastrar un buen par con un acompañante.",
         "",
     ]
+    if null is not None:
+        lines += [
+            f"Control nulo propio de los tríos (barajado): mediana {null.median_lift:.3f}, "
+            f"{100 * null.significant_fraction:.1f}% con el IC",
+            f"fuera del 1 y {null.discoveries} descubrimientos. Que el control valga para "
+            "los pares no lo hace",
+            "válido aquí: el candidato se elige entre muchos menos y con soporte más fino.",
+            "",
+        ]
     good = [t for t in triples if t.synergy.robust(min_support=20)]
     measured = [t for t in triples if t.synergy.estimated]
     lines += [f"TRÍOS ROBUSTOS ({len(good)})"]
@@ -457,7 +466,7 @@ def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleRe
            checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
            top: int = 25, min_support: int = 30, replication=None,
            computed_triples: bool = True, tuning=(), patterns=(),
-           permutation=None) -> str:
+           permutation=None, triple_null=None) -> str:
     lines: list[str] = []
     lines += header(index, corpus_path, size_control)
     lines += homebrew_warning()
@@ -465,7 +474,7 @@ def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleRe
     lines += confounder_section(pairs)
     lines += pairs_section(pairs, top, min_support)
     if computed_triples:
-        lines += triples_section(triples, top)
+        lines += triples_section(triples, top, triple_null)
     lines += rules_section(checks, pairs)
     if patterns:
         lines += patterns_section(patterns)
