@@ -159,6 +159,10 @@ def mechanical_groups(content: Content | None = None
         return not getattr(result, "rules", ())
 
     return {
+        # Fila de referencia: los grupos hay que leerlos CONTRA ésta, no contra 1,00.
+        # Si el ranking entero está una pizca por encima de 1, un grupo en 1,01 no dice
+        # nada y uno en 0,95 dice bastante.
+        "TODOS los pares (referencia)": lambda result: True,
         "dos Aliados": both(lambda c: c.is_ally),
         "un Aliado y una Acción": one_each(lambda c: c.is_ally),
         "dos Acciones": both(lambda c: not c.is_ally),

@@ -280,7 +280,7 @@ def patterns_section(patterns) -> list[str]:
         "Un par suelto casi nunca llega a ser concluyente. Un grupo de cientos de pares",
         "que comparten una propiedad mecánica, sí. Se cuenta cuántos caen a cada lado del",
         "1 (test de signos): los lifts tienen cola larga y una media se la lleva un par",
-        "con soporte 30.",
+        "con soporte 30. Cada grupo se lee CONTRA la fila de referencia, no contra 1,00.",
         "",
         f"{'grupo':<42}{'pares':>7}{'mediana':>9}{'>1':>8}{'p':>9}",
     ]
