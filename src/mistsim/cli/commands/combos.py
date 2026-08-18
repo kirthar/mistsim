@@ -44,8 +44,21 @@ def cmd_combos(args: argparse.Namespace) -> int:
     # Se materializan: la réplica en mitades necesita recorrerlas más de una vez, y
     # 15 000 observaciones son 3 MB, no un problema.
     observations = list(corpus_mod.read_observations(path))
+
+    # Cuántos tramos de tamaño de mazo hacen falta depende del tamaño del corpus, así
+    # que por defecto se ajustan mirando el diagnóstico nulo en vez de fijarlos a ojo.
+    trace: list = []
+    buckets = args.size_buckets
+    if buckets is None and not args.no_size_control:
+        buckets, trace = mining.tune_size_buckets(
+            observations, min_support=args.min_support, min_cell=args.min_cell)
+        print(f"Tramos de tamaño de mazo autoajustados a {buckets} "
+              f"(--size-buckets N para fijarlos)", file=sys.stderr)
+    elif buckets is None:
+        buckets = mining.DEFAULT_SIZE_BUCKETS
+
     index = mining.build_index(observations, size_control=not args.no_size_control,
-                               size_buckets=args.size_buckets)
+                               size_buckets=buckets)
     if not index.observations:
         print("El corpus está vacío.", file=sys.stderr)
         return 1
@@ -71,13 +84,13 @@ def cmd_combos(args: argparse.Namespace) -> int:
         robustos = [p for p in pairs if p.synergy.robust(min_support=args.min_support)]
         replication = mining.replicate(
             observations, robustos[:args.top],
-            size_control=not args.no_size_control, size_buckets=args.size_buckets,
+            size_control=not args.no_size_control, size_buckets=buckets,
             min_support=max(4, args.min_support // 2), min_cell=args.min_cell)
 
     text = report.render(index, pairs, triples, checks, corpus_path=str(path),
                          size_control=not args.no_size_control, top=args.top,
                          min_support=args.min_support, replication=replication,
-                         computed_triples=not args.no_triples)
+                         computed_triples=not args.no_triples, tuning=trace)
     print(text)
 
     if args.json:
@@ -141,10 +154,11 @@ def register(subparsers) -> None:
     parser.add_argument("--min-cell", type=int, default=5,
                         help="observaciones mínimas en CADA celda 2×2 para que un "
                              "estrato aporte a la estimación")
-    parser.add_argument("--size-buckets", type=int, default=mining.DEFAULT_SIZE_BUCKETS,
-                        help="tramos de tamaño de mazo para controlar el efecto dinero; "
-                             "con pocos tramos el de arriba mezcla mazos de 8 y de 60 "
-                             "cartas y el control se queda corto")
+    parser.add_argument("--size-buckets", type=int, default=None,
+                        help="tramos de tamaño de mazo para controlar el efecto dinero. "
+                             "Por defecto se autoajustan hasta que la mediana del lift "
+                             "vuelve a 1; con pocos tramos el de arriba mezcla mazos de "
+                             "8 y de 60 cartas y el control se queda corto")
     parser.add_argument("--no-size-control", action="store_true",
                         help="no estratificar por tamaño de mazo (para ver cuánto cambia)")
     parser.add_argument("--no-triples", action="store_true")

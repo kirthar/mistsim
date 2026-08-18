@@ -98,10 +98,15 @@ def bucket_edges(sizes: Sequence[int], buckets: int) -> list[int]:
     return edges
 
 
-#: Tramos de tamaño de mazo por defecto. Ocho y no tres: con terciles el tramo alto va
-#: de 8 a 60 cartas y dentro de él el tamaño de mazo sigue explicando la victoria, lo
-#: que desplazaba la mediana del lift de TODOS los pares a 1,15 (ver `Calibration`).
+#: Tramos de tamaño de mazo por defecto cuando no se autoajusta. Ocho y no tres: con
+#: terciles el tramo alto va de 8 a 60 cartas y dentro de él el tamaño sigue explicando
+#: la victoria, lo que desplazaba la mediana del lift de TODOS los pares (ver
+#: `Calibration`). Cuántos hacen falta depende del tamaño del corpus, así que el CLI
+#: usa `tune_size_buckets` en lugar de este número fijo.
 DEFAULT_SIZE_BUCKETS = 8
+
+#: Escalera de tramos que prueba el autoajuste, de menos a más control.
+BUCKET_LADDER = (3, 5, 8, 12, 20, 30, 45)
 
 
 def build_index(observations: Iterable[Observation], *, size_control: bool = True,
@@ -523,3 +528,40 @@ def replicate(observations: Sequence[Observation], selected: Sequence[PairResult
                          [lifts[1][k] for k in comunes]) if len(comunes) > 2 else math.nan
     return Replication(checked=len(detail), same_direction=same, rank_agreement=rho,
                        detail=tuple(detail))
+
+
+def tune_size_buckets(observations: Sequence[Observation], *,
+                      candidates: Sequence[int] = BUCKET_LADDER,
+                      min_support: int = 30, min_cell: int = 5,
+                      tolerance: float = 0.02
+                      ) -> tuple[int, list[tuple[int, Calibration]]]:
+    """Elige cuántos tramos de tamaño de mazo hacen falta, mirando la calibración.
+
+    Cuántos tramos bastan **depende del tamaño del corpus**, y esto no es una excusa:
+    con 5 000 partidas la mayoría de los estratos se caen por falta de celdas y el
+    estimador queda atenuado, así que ocho tramos parecen suficientes; con 30 000 los
+    estratos se pueblan, el confusor residual aflora y ocho tramos dejan la mediana del
+    lift en 1,06. Fijar el número a ojo garantiza equivocarse en un extremo o en el otro.
+
+    El criterio de parada es el diagnóstico nulo, no el resultado: se sube por la
+    escalera hasta que la mediana del lift de los ~2 000 pares vuelve a 1. Es un
+    criterio anclado en una hipótesis previa —la inmensa mayoría de los pares del juego
+    no interactúan— y no en qué pares acaban saliendo, que es lo que lo separa de
+    buscarle al análisis la forma que más gusta.
+
+    Devuelve el número elegido y la escalera recorrida, para poder enseñarla.
+    """
+    trace: list[tuple[int, Calibration]] = []
+    chosen = candidates[-1]
+    for buckets in candidates:
+        index = build_index(observations, size_control=True, size_buckets=buckets)
+        cal = calibration(mine_pairs(index, min_support=min_support, min_cell=min_cell))
+        trace.append((buckets, cal))
+        if math.isfinite(cal.median_lift) and abs(cal.median_lift - 1.0) <= tolerance:
+            chosen = buckets
+            break
+    else:
+        # Ninguno centra la mediana: se queda el más estricto y el informe lo dirá.
+        if trace:
+            chosen = min(trace, key=lambda item: abs(item[1].median_lift - 1.0))[0]
+    return chosen, trace

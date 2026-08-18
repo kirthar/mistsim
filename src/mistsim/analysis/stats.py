@@ -128,16 +128,34 @@ def wilson_interval(wins: int, n: int, z: float = Z95) -> tuple[float, float]:
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
-def _log_rate(cell: Cell) -> tuple[float, float]:
-    """log de la tasa de victoria de una celda y su varianza aproximada.
+def _log_rate(cell: Cell) -> float:
+    """log de la tasa de victoria de una celda, con corrección de continuidad."""
+    return math.log((cell.wins + CONTINUITY) / (cell.n + 2 * CONTINUITY))
 
-    Var(log p̂) ≈ (1−p)/(n·p) por el método delta. Con la corrección de continuidad
-    aplicada a numerador y denominador para que nunca sea 0 ni 1 exactos.
+
+def _cell_variance(cell: Cell, base_rate: float) -> float:
+    """Var(log p̂) ≈ (1−p)/(n·p) por el método delta, con p = tasa DEL ESTRATO.
+
+    Aquí está el detalle que costó encontrar. La versión obvia usa la p de la propia
+    celda, y eso sesga el resultado hacia arriba de forma sistemática: la varianza
+    estimada baja justo cuando la celda ha ganado por encima de lo suyo, así que los
+    estratos donde el par tuvo suerte reciben MÁS peso al agregar por inverso de la
+    varianza. Con un nulo de permutación —barajar quién gana dentro de cada estrato, que
+    destruye toda asociación— la mediana del lift salía en 1,03 y el 12% de los pares
+    daba "significativo". Es decir: el propio estimador fabricaba 100 hallazgos.
+
+    Usando la tasa del estrato el peso ya no depende de cómo se repartieron las
+    victorias entre las cuatro celdas, sólo de sus tamaños, y el nulo vuelve a su sitio.
     """
-    wins = cell.wins + CONTINUITY
     n = cell.n + 2 * CONTINUITY
-    p = wins / n
-    return math.log(p), (1 - p) / wins
+    return (1 - base_rate) / (n * base_rate)
+
+
+def base_rate(cells: tuple[Cell, ...]) -> float:
+    """Tasa de victoria del estrato entero. Las cuatro celdas lo particionan."""
+    wins = sum(c.wins for c in cells) + CONTINUITY
+    total = sum(c.n for c in cells) + 2 * CONTINUITY
+    return wins / total
 
 
 def interaction(both: Cell, only_a: Cell, only_b: Cell, neither: Cell) -> tuple[float, float]:
@@ -146,11 +164,10 @@ def interaction(both: Cell, only_a: Cell, only_b: Cell, neither: Cell) -> tuple[
     ψ = (log p11 − log p10) − (log p01 − log p00): el efecto de B entre los que tienen
     A menos el efecto de B entre los que no. Simétrico al intercambiar A y B.
     """
-    log11, v11 = _log_rate(both)
-    log10, v10 = _log_rate(only_a)
-    log01, v01 = _log_rate(only_b)
-    log00, v00 = _log_rate(neither)
-    return (log11 - log10 - log01 + log00), (v11 + v10 + v01 + v00)
+    cells = (both, only_a, only_b, neither)
+    rate = base_rate(cells)
+    psi = _log_rate(both) - _log_rate(only_a) - _log_rate(only_b) + _log_rate(neither)
+    return psi, sum(_cell_variance(c, rate) for c in cells)
 
 
 def pool(terms: list[tuple[float, float]]) -> tuple[float, float]:

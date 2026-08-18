@@ -703,3 +703,72 @@ def test_el_aviso_de_potencia_traduce_un_informe_vacio_en_un_numero_de_partidas(
 def test_z_para_una_p_bilateral_invierte_la_normal():
     assert stats.z_for_two_sided_p(0.05) == pytest.approx(1.96, abs=0.01)
     assert stats.z_for_two_sided_p(0.01) == pytest.approx(2.576, abs=0.01)
+
+
+def test_el_peso_de_un_estrato_no_puede_depender_de_si_ese_estrato_gano():
+    """El sesgo que destapó el nulo de permutación, fijado como test.
+
+    Dos estratos idénticos en tamaños de celda: uno con el par ganando de más y otro
+    con el par ganando de menos. Si el peso saliera de la tasa de cada celda, el
+    estrato afortunado pesaría más y la agregación se iría hacia arriba sola. Con la
+    tasa del estrato, los dos pesan lo mismo y se cancelan.
+    """
+    afortunado = (Cell(40, 30), Cell(60, 24), Cell(60, 24), Cell(240, 96))
+    desafortunado = (Cell(40, 10), Cell(60, 24), Cell(60, 24), Cell(240, 96))
+    _, var_arriba = stats.interaction(*afortunado)
+    _, var_abajo = stats.interaction(*desafortunado)
+    # Las tasas base difieren algo —el propio par mueve el total del estrato—, así que
+    # los pesos no salen idénticos, pero sí del mismo orden: 1,2× de diferencia. Con la
+    # tasa de cada celda la celda "ambas" pasaba de varianza 0,008 a 0,071, ocho veces,
+    # y ese factor iba entero al peso del estrato afortunado.
+    assert var_arriba == pytest.approx(var_abajo, rel=0.25)
+
+    psi_arriba, _ = stats.interaction(*afortunado)
+    psi_abajo, _ = stats.interaction(*desafortunado)
+    agregado = stats.estimate_from_strata([afortunado, desafortunado])
+    assert psi_arriba > 0 > psi_abajo
+    assert agregado.lift == pytest.approx(1.0, abs=0.25), "tienen que cancelarse"
+
+
+def test_bajo_un_nulo_de_permutacion_el_estimador_no_inventa_sinergias():
+    """El contraste definitivo: si se baraja quién gana, no puede quedar nada.
+
+    Se construye un corpus con confusor de dinero fuerte y luego se permuta la victoria
+    DENTRO de cada estrato, lo que destruye toda asociación entre cartas y resultado.
+    La respuesta correcta para los 91 pares es lift 1. Este test es el que habría
+    cazado el sesgo de pesos que tenía el estimador: la mediana salía en 1,03 y el 12%
+    de los pares daba "significativo" sobre datos barajados.
+    """
+    rng = random.Random(7)
+    rows = _poblacion_sin_ninguna_sinergia(24000, seed=3)
+
+    # Se baraja dentro de cada tamaño de mazo, que es el estrato que importa aquí: así
+    # se conserva la relación tamaño→victoria (el confusor) y se destruye la de las
+    # cartas concretas con la victoria (lo que se quiere medir).
+    barajado: list[Observation] = []
+    por_tamano: dict[int, list[Observation]] = {}
+    for o in rows:
+        por_tamano.setdefault(o.size, []).append(o)
+    for grupo in por_tamano.values():
+        victorias = [o.won for o in grupo]
+        rng.shuffle(victorias)
+        barajado.extend(
+            Observation(o.strategy, o.players, o.mode, o.cards, w, o.game)
+            for o, w in zip(grupo, victorias, strict=True))
+
+    index = mining.build_index(barajado, size_control=True, size_buckets=12)
+    cal = mining.calibration(mining.mine_pairs(index, min_support=30, min_cell=5))
+    assert cal.median_lift == pytest.approx(1.0, abs=0.03)
+    assert cal.significant_fraction < 0.12
+    assert cal.discoveries == 0, "sobre datos barajados no puede sobrevivir ninguno"
+
+
+def test_el_autoajuste_sube_por_la_escalera_hasta_centrar_la_mediana():
+    data = _poblacion_sin_ninguna_sinergia(24000, seed=5)
+    elegido, escalera = mining.tune_size_buckets(data, min_support=30, min_cell=5)
+    assert escalera, "tiene que dejar traza de lo que probó"
+    assert escalera[0][0] == mining.BUCKET_LADDER[0]
+    # Con pocos tramos la mediana está desplazada; con el elegido, centrada.
+    assert not escalera[0][1].well_centred
+    assert abs(escalera[-1][1].median_lift - 1.0) <= 0.02
+    assert elegido == escalera[-1][0]

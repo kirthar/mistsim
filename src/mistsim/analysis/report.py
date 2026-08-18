@@ -113,7 +113,7 @@ def homebrew_warning() -> list[str]:
     ]
 
 
-def calibration_section(pairs: Sequence[PairResult]) -> list[str]:
+def calibration_section(pairs: Sequence[PairResult], tuning=()) -> list[str]:
     """La sección que hay que mirar antes que el ranking."""
     cal = calibration(pairs)
     veredicto = ("centrado: el ajuste por confusor parece completo"
@@ -137,7 +137,23 @@ def calibration_section(pairs: Sequence[PairResult]) -> list[str]:
         "Sin la corrección de Benjamini-Hochberg, probar 2 080 pares al 5% regala ~104",
         "'hallazgos' aunque no exista ninguno. La columna q es la corregida.",
         "",
-    ]
+    ] + _tuning_rows(tuning)
+
+
+def _tuning_rows(tuning) -> list[str]:
+    """La escalera de tramos que recorrió el autoajuste, si lo hubo."""
+    if not tuning:
+        return []
+    lines = ["Autoajuste del control por tamaño de mazo (se para al centrar la mediana):",
+             f"  {'tramos':>7}{'mediana':>10}{'IC fuera del 1':>17}{'descubrimientos':>17}"]
+    for buckets, cal in tuning:
+        lines.append(f"  {buckets:>7}{cal.median_lift:>10.3f}"
+                     f"{100 * cal.significant_fraction:>16.1f}%{cal.discoveries:>17}")
+    lines += ["", "Cuántos tramos hacen falta depende del tamaño del corpus: con pocas",
+              "partidas los estratos se caen por falta de celdas y el estimador queda",
+              "atenuado; con muchas, el confusor residual aflora y hacen falta más tramos.",
+              ""]
+    return lines
 
 
 def confounder_section(pairs: Sequence[PairResult], top: int = 8) -> list[str]:
@@ -383,11 +399,11 @@ def explain_section(index: Index, a: str, b: str, min_cell: int) -> str:
 def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
            checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
            top: int = 25, min_support: int = 30, replication=None,
-           computed_triples: bool = True) -> str:
+           computed_triples: bool = True, tuning=()) -> str:
     lines: list[str] = []
     lines += header(index, corpus_path, size_control)
     lines += homebrew_warning()
-    lines += calibration_section(pairs)
+    lines += calibration_section(pairs, tuning)
     lines += confounder_section(pairs)
     lines += pairs_section(pairs, top, min_support)
     if computed_triples:
