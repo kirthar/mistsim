@@ -6,6 +6,7 @@ el primer número de la lista es casi siempre el que menos evidencia tiene.
 """
 from __future__ import annotations
 
+import functools
 import math
 from collections.abc import Sequence
 
@@ -53,10 +54,11 @@ def _fmt_ci(estimate) -> str:
     return f"[{estimate.ci_low:4.2f}–{estimate.ci_high:5.2f}]"
 
 
-def _pair_row(pair: PairResult) -> str:
+def _pair_row(pair: PairResult, min_support: int = 30) -> str:
     names = f"{pair.cards[0]} + {pair.cards[1]}"
     low, high = pair.wilson()
-    flag = "✔" if pair.synergy.robust() else ("·" if pair.synergy.significant else " ")
+    flag = ("✔" if pair.synergy.robust(min_support=min_support)
+            else ("·" if pair.synergy.significant else " "))
     rules = ",".join(pair.rules) if pair.rules else "—"
     return (f" {flag} {names:<34.34} {_fmt_lift(pair.synergy.lift)} "
             f"{_fmt_ci(pair.synergy):<13} q={_fmt_q(pair.synergy.q_value)} "
@@ -193,12 +195,13 @@ def pairs_section(pairs: Sequence[PairResult], top: int, min_support: int) -> li
         "",
         f"SINERGIAS ROBUSTAS ({len(robust)})",
     ]
-    _rows(lines, robust[:top], _pair_row,
-          "  (ninguna: con este corpus ningún par supera los tres criterios a la vez)")
+    fila = functools.partial(_pair_row, min_support=min_support)
+    _rows(lines, robust[:top], fila,
+          "  (ninguna: con este corpus ningún par supera los cuatro criterios a la vez)")
     lines += ["", f"CANDIDATOS NO CONCLUYENTES (mejores {len(weak)}) — NO citar como hallazgo"]
-    _rows(lines, weak, _pair_row, "  (ninguno)")
+    _rows(lines, weak, fila, "  (ninguno)")
     lines += ["", f"ANTI-SINERGIAS ROBUSTAS ({len(anti)}) — juntas rinden menos que por separado"]
-    _rows(lines, anti[:top], _pair_row, "  (ninguna)")
+    _rows(lines, anti[:top], fila, "  (ninguna)")
     lines.append("")
     return lines
 
@@ -247,6 +250,34 @@ def rules_section(checks: Sequence[RuleCheck], pairs: Sequence[PairResult]) -> l
     lines += ["", "PARES FUERTES QUE NINGUNA REGLA PREDICE — lo que aporta la minería"]
     fresh = [p for p in undiscovered(pairs, top=200) if p.synergy.robust()][:12]
     _rows(lines, fresh, _pair_row, "  (ninguno robusto; ver la lista de no concluyentes)")
+    lines.append("")
+    return lines
+
+
+def replication_section(rep) -> list[str]:
+    """Lo que sobrevive a repetir el análisis en la otra mitad del corpus."""
+    lines = [
+        RULE,
+        "REPLICACIÓN EN DOS MITADES INDEPENDIENTES",
+        RULE,
+        "Un IC dice cuánto ruido tiene una estimación; no dice cuánto ruido añaden las",
+        "decisiones de análisis. Se corta el corpus por partidas pares e impares —nunca",
+        "por asientos, que comparten resultado— y se rehace todo en cada mitad.",
+        "",
+        f"  concordancia de rangos entre mitades   ρ = {rep.rank_agreement:+.3f}",
+        f"  pares robustos que replican dirección  {rep.same_direction}/{rep.checked}"
+        + (f" ({100 * rep.agreement:.0f}%)" if rep.checked else ""),
+        "",
+    ]
+    if rep.detail:
+        lines.append(f"{'par':<40}{'mitad par':>12}{'mitad impar':>13}")
+        for cards, a, b in rep.detail[:20]:
+            marca = " " if (a - 1) * (b - 1) > 0 else "×"
+            lines.append(f"{marca}{cards[0] + ' + ' + cards[1]:<39}{a:>12.2f}{b:>13.2f}")
+        lines.append("")
+        lines.append("× = cambia de lado del 1 entre mitades: no replica, no es un hallazgo.")
+    else:
+        lines.append("  (no hay pares robustos que contrastar)")
     lines.append("")
     return lines
 
@@ -339,14 +370,18 @@ def explain_section(index: Index, a: str, b: str, min_cell: int) -> str:
 
 def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
            checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
-           top: int = 25, min_support: int = 30) -> str:
+           top: int = 25, min_support: int = 30, replication=None,
+           computed_triples: bool = True) -> str:
     lines: list[str] = []
     lines += header(index, corpus_path, size_control)
     lines += homebrew_warning()
     lines += calibration_section(pairs)
     lines += confounder_section(pairs)
     lines += pairs_section(pairs, top, min_support)
-    lines += triples_section(triples, top)
+    if computed_triples:
+        lines += triples_section(triples, top)
     lines += rules_section(checks, pairs)
+    if replication is not None:
+        lines += replication_section(replication)
     lines += verdict(pairs, triples, index)
     return "\n".join(lines)

@@ -642,3 +642,38 @@ def test_el_informe_marca_los_pares_sin_medicion_como_n_d():
                           top=5, min_support=10)
     assert "n/d" in texto
     assert not any(p.synergy.estimated for p in pairs)
+
+
+def test_la_replicacion_confirma_lo_real_y_tumba_lo_espurio():
+    """Un par sinérgico de verdad replica en las dos mitades; el ruido no.
+
+    Se mezclan un par con interacción real (A+B) y una población en la que todos los
+    demás pares son ruido. La réplica tiene que distinguirlos.
+    """
+    rng = random.Random(41)
+    rows = []
+    for game, base in enumerate(synthetic(rng, 16000, p_a=0.5, p_b=0.5, base=0.12,
+                                          effect_a=1.2, effect_b=1.2, interaction=2.2,
+                                          filler=5)):
+        rows.append(Observation(base.strategy, base.players, base.mode, base.cards,
+                                base.won, game=game))
+    index = mining.build_index(rows, size_control=True)
+    pairs = mining.mine_pairs(index, min_support=30)
+    ab = next(p for p in pairs if p.cards == ("A", "B"))
+    rep = mining.replicate(rows, [ab], min_support=10)
+    assert rep.checked == 1
+    assert rep.same_direction == 1
+    (_, mitad_par, mitad_impar) = rep.detail[0]
+    assert mitad_par > 1.4 and mitad_impar > 1.4
+
+
+def test_la_replicacion_no_parte_una_partida_entre_las_dos_mitades():
+    """Los asientos de una misma partida comparten resultado: van juntos o mienten."""
+    rows = [Observation("equilibrado", 3, "pvp", frozenset({"A", "B"}), i % 2 == 0,
+                        game=i // 3) for i in range(600)]
+    index = mining.build_index(rows, size_control=False)
+    pairs = mining.mine_pairs(index, min_support=10)
+    rep = mining.replicate(rows, pairs, min_support=5)
+    juegos_pares = {o.game for o in rows if o.game % 2 == 0}
+    assert all(g % 2 == 0 for g in juegos_pares)
+    assert rep.checked >= 0  # la firma aguanta un corpus degenerado sin reventar

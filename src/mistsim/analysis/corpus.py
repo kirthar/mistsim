@@ -105,6 +105,10 @@ class Observation:
     #: la misma carta no son un par consigo misma.
     cards: frozenset[str]
     won: bool
+    #: Índice de la partida dentro del corpus. Sirve para partirlo en dos mitades
+    #: independientes SIN cortar por la mitad ninguna partida: los asientos de una
+    #: misma partida comparten resultado y tienen que caer del mismo lado.
+    game: int = -1
 
     @property
     def size(self) -> int:
@@ -159,7 +163,7 @@ def read_observations(path: str | Path, *, universe: frozenset[str] | None = Non
     """
     if universe is None:
         universe = market_names()
-    for raw in serial.read_corpus_dicts(path):
+    for game, raw in enumerate(serial.read_corpus_dicts(path)):
         players = len(raw["players"])
         mode = infer_mode(raw)
         for player in raw["players"]:
@@ -167,4 +171,4 @@ def read_observations(path: str | Path, *, universe: frozenset[str] | None = Non
             if len(cards) < min_cards:
                 continue
             yield Observation(strategy=player["strategy"], players=players, mode=mode,
-                              cards=cards, won=bool(player["won"]))
+                              cards=cards, won=bool(player["won"]), game=game)

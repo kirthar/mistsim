@@ -431,3 +431,63 @@ def cost_correlation(pairs: Sequence[PairResult]) -> ConfounderCheck:
         synergy_vs_cost=stats.spearman(synergy, costs),
         naive_vs_synergy=stats.spearman(naive, synergy),
         pairs=len(usable))
+
+
+# --- replicación -------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Replication:
+    """Qué sobrevive al partir el corpus en dos mitades independientes.
+
+    Un intervalo de confianza dice cuánto ruido tiene UNA estimación. No dice nada de
+    cuánto ruido añaden las decisiones de análisis: qué estratos, qué tramos, qué
+    umbral. La réplica sí: si un par sale con lift 2 en las partidas pares y con 0,8 en
+    las impares, el intervalo estaba mintiendo.
+
+    El corte es por partida y no por asiento, porque los asientos de una misma partida
+    comparten resultado —gana uno solo— y repartirlos entre las dos mitades las haría
+    dependientes justo en la variable que se mide.
+    """
+
+    checked: int
+    #: Pares que en las dos mitades salen al mismo lado del 1.
+    same_direction: int
+    #: Spearman entre los lifts de una mitad y los de la otra, sobre todos los medidos.
+    rank_agreement: float
+    #: Detalle par a par: (cartas, lift A, lift B).
+    detail: tuple[tuple[tuple[str, str], float, float], ...]
+
+    @property
+    def agreement(self) -> float:
+        return self.same_direction / self.checked if self.checked else float("nan")
+
+
+def replicate(observations: Sequence[Observation], selected: Sequence[PairResult], *,
+              size_control: bool = True, size_buckets: int = DEFAULT_SIZE_BUCKETS,
+              min_support: int = 10, min_cell: int = 5) -> Replication:
+    """Vuelve a estimar `selected` en cada mitad del corpus y compara."""
+    halves = ([o for o in observations if o.game % 2 == 0],
+              [o for o in observations if o.game % 2 == 1])
+    indexes = [build_index(h, size_control=size_control, size_buckets=size_buckets)
+               for h in halves]
+    lifts: list[dict[tuple[str, str], float]] = []
+    for index in indexes:
+        lifts.append({p.cards: p.synergy.lift
+                      for p in mine_pairs(index, min_support=min_support,
+                                          min_cell=min_cell)
+                      if p.synergy.estimated})
+
+    detail = []
+    for pair in selected:
+        a, b = lifts[0].get(pair.cards), lifts[1].get(pair.cards)
+        if a is None or b is None:
+            continue
+        detail.append((pair.cards, a, b))
+    same = sum(1 for _, a, b in detail if (a - 1) * (b - 1) > 0)
+
+    comunes = sorted(set(lifts[0]) & set(lifts[1]))
+    rho = stats.spearman([lifts[0][k] for k in comunes],
+                         [lifts[1][k] for k in comunes]) if len(comunes) > 2 else math.nan
+    return Replication(checked=len(detail), same_direction=same, rank_agreement=rho,
+                       detail=tuple(detail))

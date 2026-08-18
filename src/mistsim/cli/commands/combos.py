@@ -41,7 +41,9 @@ def cmd_combos(args: argparse.Namespace) -> int:
               file=sys.stderr)
 
     content_costs = corpus_mod.card_costs()
-    observations = corpus_mod.read_observations(path)
+    # Se materializan: la réplica en mitades necesita recorrerlas más de una vez, y
+    # 15 000 observaciones son 3 MB, no un problema.
+    observations = list(corpus_mod.read_observations(path))
     index = mining.build_index(observations, size_control=not args.no_size_control,
                                size_buckets=args.size_buckets)
     if not index.observations:
@@ -64,21 +66,30 @@ def cmd_combos(args: argparse.Namespace) -> int:
         rules.annotate(triples)
     checks = rules.check_rules(pairs, min_support=args.min_support)
 
+    replication = None
+    if not args.no_replication:
+        robustos = [p for p in pairs if p.synergy.robust(min_support=args.min_support)]
+        replication = mining.replicate(
+            observations, robustos[:args.top],
+            size_control=not args.no_size_control, size_buckets=args.size_buckets,
+            min_support=max(4, args.min_support // 2), min_cell=args.min_cell)
+
     text = report.render(index, pairs, triples, checks, corpus_path=str(path),
                          size_control=not args.no_size_control, top=args.top,
-                         min_support=args.min_support)
+                         min_support=args.min_support, replication=replication,
+                         computed_triples=not args.no_triples)
     print(text)
 
     if args.json:
         Path(args.json).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.json).write_text(json.dumps(_as_json(index, pairs, triples, checks),
+        Path(args.json).write_text(json.dumps(_as_json(index, pairs, triples, checks, replication),
                                               ensure_ascii=False, indent=2),
                                    encoding="utf-8")
         print(f"\nRanking completo en {args.json}", file=sys.stderr)
     return 0
 
 
-def _as_json(index, pairs, triples, checks) -> dict:
+def _as_json(index, pairs, triples, checks, rep=None) -> dict:
     """Volcado completo, para el visor web y para rehacer gráficas sin re-minar."""
     def estimate(e):
         return {"lift": e.lift, "ci_low": e.ci_low, "ci_high": e.ci_high,
@@ -101,6 +112,8 @@ def _as_json(index, pairs, triples, checks) -> dict:
         "triples": [{"cards": list(t.cards), "support": t.support, "cost": t.cost,
                      "weakest_third": t.weakest_third, "rules": list(t.rules),
                      **estimate(t.synergy)} for t in triples],
+        "replication": ({"checked": rep.checked, "same_direction": rep.same_direction,
+                         "rank_agreement": rep.rank_agreement} if rep else None),
         "rule_checks": [{"rule": c.rule, "measured": c.measured, "confirmed": c.confirmed,
                          "contradicted": c.contradicted, "median_lift": c.median_lift,
                          "best": list(c.best) if c.best else None} for c in checks],
@@ -135,6 +148,8 @@ def register(subparsers) -> None:
     parser.add_argument("--no-size-control", action="store_true",
                         help="no estratificar por tamaño de mazo (para ver cuánto cambia)")
     parser.add_argument("--no-triples", action="store_true")
+    parser.add_argument("--no-replication", action="store_true",
+                        help="no rehacer el análisis en dos mitades del corpus")
     parser.add_argument("--top", type=int, default=25, help="filas por sección")
     parser.add_argument("--explain", nargs=2, metavar=("CARTA", "CARTA"),
                         help="desglosa un par estrato a estrato en vez de minar todo")
