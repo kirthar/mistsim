@@ -10,6 +10,33 @@ los asientos alternados para que el orden de turno no sesgue el resultado. Es la
 literal del presupuesto de cómputo acordado (11 rivales x N partidas x 2 asientos);
 escalar a partidas de más jugadores o a Cooperativo queda fuera de esta entrega — ver
 el informe del stream.
+
+## Ruido de muestreo y las tres bandas de semillas
+
+`evaluate_profile` juega un número FINITO de partidas por candidato, así que su
+resultado es una estimación con error estándar, no el winrate real:
+
+    SE = sqrt(0.25 / n)          # peor caso, p=0.5, n = games_per_matchup x 11 x 2
+
+Con `games_per_matchup=3` (n=66) eso es ~6.2 puntos; con el valor por defecto
+`games_per_matchup=4` (n=88), ~5.3 puntos. `standard_error()` calcula esto para
+cualquier `n`. Seleccionar el máximo de una población sobre una medida con ese ruido
+sesga al alza: el "mejor" de una generación es en parte el más afortunado, no el mejor
+de verdad, y ese sesgo desaparece al re-medirlo con una muestra nueva ("regresión a la
+media"). Por eso hay tres bandas de semillas, deliberadamente separadas y nunca
+solapadas entre sí (`training_seed`, `validation_seed`, `final_eval_seed`):
+
+- **Entrenamiento** — una por generación. Fija DENTRO de la generación (números
+  aleatorios comunes: los individuos de una misma generación compiten sobre las mismas
+  partidas, así que la comparación entre ellos es justa) pero distinta ENTRE
+  generaciones, para que el GA no pueda sobreajustar un único conjunto fijo de partidas
+  durante toda la evolución.
+- **Validación** — fija en TODA la corrida, nunca usada para seleccionar individuos.
+  Sirve para re-medir al mejor de cada generación con una muestra que no ha visto la
+  presión de selección: es la curva de convergencia que se reporta, no el fitness de
+  entrenamiento (que está sesgado al alza por construcción).
+- **Evaluación final** — un tercer bloque, jamás tocado ni por entrenamiento ni por
+  validación. Es el número que se reporta como resultado del perfil ganador.
 """
 from __future__ import annotations
 
@@ -34,6 +61,72 @@ GAUNTLET: tuple[str, ...] = tuple(archetypes.names())
 #: datos de Misión son homebrew (ver README) y hoy explican el 84% de las partidas a 3
 #: jugadores; separar esta razón permite reportar el fitness con y sin ella.
 MISSION_WIN_REASON = "all-missions"
+
+# --- las tres bandas de semillas, ver docstring del módulo ---------------------------
+
+#: Semillas que usa una sola generación: como mucho `len(GAUNTLET) * 2 * games_per_
+#: matchup`. Con el gauntlet actual (11 x 2 = 22 emparejamientos, cada uno con hasta
+#: 10 000 semillas propias, ver `evaluate_profile`) eso es <= 220 000; 1 000 000 de
+#: separación entre generaciones deja margen de sobra y soporta miles de generaciones
+#: sin que dos generaciones lleguen a compartir una sola partida.
+GENERATION_SEED_STRIDE = 1_000_000
+
+#: Bloque reservado para la curva de convergencia (validación): el mismo en todas las
+#: generaciones -- lo que varía es el candidato que se mide, no la muestra -- y muy por
+#: encima de cualquier offset que alcance el entrenamiento en una corrida razonable.
+VALIDATION_SEED_OFFSET = 2_000_000_000
+
+#: Bloque reservado para la medición final. Un tercer rango, tan alejado de los otros
+#: dos como el de validación lo está del entrenamiento.
+FINAL_EVAL_SEED_OFFSET = 4_000_000_000
+
+
+def training_seed(base_seed: int, generation: int) -> int:
+    """Semilla para evaluar la población durante `generation`-ésima generación.
+
+    Todos los individuos de esa generación se miden con esta misma semilla base (más el
+    offset por rival/asiento que ya aplica `evaluate_profile`): es números aleatorios
+    comunes, la forma correcta de comparar candidatos entre sí sin que el ruido de
+    muestreo decida el ganador. Generaciones distintas usan bloques distintos para que
+    el GA no pueda memorizar un único conjunto de partidas durante toda la evolución.
+    """
+    return base_seed + generation * GENERATION_SEED_STRIDE
+
+
+def validation_seed(base_seed: int) -> int:
+    """Semilla fija para re-medir al mejor de cada generación fuera de la muestra que
+    se usó para seleccionarlo. Nunca cambia entre generaciones: es lo que hace
+    comparable la curva de convergencia consigo misma."""
+    return base_seed + VALIDATION_SEED_OFFSET
+
+
+def final_eval_seed(base_seed: int) -> int:
+    """Semilla para la medición final del perfil ganador. Un tercer bloque, distinto
+    del de entrenamiento y del de validación: el número que se reporta no puede venir
+    de una muestra que ya influyó, ni directa ni indirectamente, en la búsqueda."""
+    return base_seed + FINAL_EVAL_SEED_OFFSET
+
+
+def standard_error(games: int) -> float:
+    """Error estándar de un winrate medido sobre `games` partidas, en el peor caso
+    (p=0.5, donde la varianza de una proporción es máxima).
+
+    Sirve de regla rápida para no leer ruido de muestreo como una mejora: dos
+    proporciones independientes con este error estándar sólo se distinguen con
+    confianza si su diferencia supera unas ~2 veces esto (por ejemplo, con
+    `games_per_matchup=3` -- 66 partidas por individuo -- el error estándar es ~6.2
+    puntos, así que una diferencia de fitness por debajo de ~12 puntos no es fiable).
+    """
+    if games <= 0:
+        return float("nan")
+    return (0.25 / games) ** 0.5
+
+
+def games_per_individual(games_per_matchup: int, gauntlet: tuple[str, ...] = GAUNTLET) -> int:
+    """Cuántas partidas juega `evaluate_profile` por candidato: gauntlet x 2 asientos
+    x `games_per_matchup`. Es el `n` que entra en `standard_error`."""
+    return len(gauntlet) * 2 * games_per_matchup
+
 
 _CHARACTER_POOL: tuple[str, ...] | None = None
 
@@ -89,6 +182,12 @@ def evaluate_profile(
     dados: cada emparejamiento usa un tramo de semillas propio derivado de su índice, no
     de un contador compartido, así que el resultado no depende de `workers` ni del orden
     en que terminen los procesos — la misma garantía que ya da `run_batch`.
+
+    Esta función es agnóstica de FASE (entrenamiento/validación/evaluación final): sólo
+    sabe jugar el gauntlet con el `base_seed` que le pasen. Es quien la llama (`ga.run`
+    vía `cli/commands/optimize.py`) quien decide qué banda de semillas corresponde a
+    cada llamada usando `training_seed`/`validation_seed`/`final_eval_seed` — ver el
+    docstring del módulo.
     """
     config = GameConfig(num_players=2, max_turns=max_turns)
     wins = 0

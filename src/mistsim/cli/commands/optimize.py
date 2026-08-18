@@ -9,12 +9,27 @@ Presupuesto de cómputo, para elegir `--population`/`--generations`/`--games` co
 conocimiento de causa:
 
     partidas totales = población x 11 rivales x --games x 2 asientos x generaciones
+                        (+ una remedición de validación por generación, +9% aprox.
+                        con los valores por defecto)
 
 Medido en esta máquina (4 núcleos, `collect_log=False`): ~85-90 partidas/s. Los valores
 por defecto (24 x 11 x 4 x 2 x 12 = 25 344 partidas) tardan unos 5 minutos con
 `-w 0` (todos los núcleos). `--quick` (8 x 11 x 1 x 2 x 4 = 704 partidas) tarda
 segundos y sirve para comprobar que el comando funciona antes de lanzar una corrida
 larga.
+
+## Ruido de muestreo: qué diferencia de fitness es señal y cuál es ruido
+
+Cada winrate que imprime este comando viene de un número finito de partidas, así que
+trae error estándar (`mistsim.optimize.fitness.standard_error`): con `--games 4`
+(el valor por defecto, 88 partidas por candidato) son ~5.3 puntos; con `--games 3`
+(66 partidas), ~6.2 puntos. Dos perfiles medidos por separado sólo se distinguen con
+confianza si su diferencia supera unas ~2 veces ese error estándar (con `--games 3`,
+unos ~12 puntos) — por debajo de eso, la diferencia puede ser enteramente ruido de
+qué semillas le tocaron a cada uno, no una estrategia mejor. Ver el docstring de
+`mistsim.optimize.fitness` para las tres bandas de semillas (entrenamiento / validación
+/ evaluación final) que evitan que ese ruido se cuele como una mejora falsa en la
+curva de convergencia.
 """
 from __future__ import annotations
 
@@ -28,7 +43,15 @@ from mistsim.content.loader import load_content
 from mistsim.domain.state import GameConfig
 from mistsim.io import serial
 from mistsim.optimize import ga
-from mistsim.optimize.fitness import GAUNTLET, evaluate_profile
+from mistsim.optimize.fitness import (
+    GAUNTLET,
+    evaluate_profile,
+    final_eval_seed,
+    games_per_individual,
+    standard_error,
+    training_seed,
+    validation_seed,
+)
 from mistsim.optimize.genome import vector_to_profile
 
 #: Preset completo: termina en minutos, no horas (ver cabecera del módulo).
@@ -55,30 +78,47 @@ def cmd_optimize(args: argparse.Namespace) -> int:
     games = args.games if args.games is not None else preset["games"]
 
     total_games = population * len(GAUNTLET) * games * 2 * generations
+    n = games_per_individual(games)
+    se = standard_error(n)
     print(f"mistsim optimize · personaje={args.character} · "
           f"población={population} generaciones={generations} "
           f"partidas/emparejamiento={games} · gauntlet={len(GAUNTLET)} arquetipos")
-    print(f"presupuesto: hasta {total_games} partidas "
+    print(f"presupuesto: hasta {total_games} partidas de búsqueda "
           f"(población x {len(GAUNTLET)} rivales x {games} partidas x 2 asientos x "
-          f"{generations} generaciones)\n")
+          f"{generations} generaciones), + validación por generación")
+    print(f"ruido de muestreo: cada candidato se mide sobre {n} partidas -> error "
+          f"estándar (p=0.5) ~{100 * se:.1f} puntos; dos perfiles medidos por separado "
+          f"sólo son distinguibles con confianza si difieren en ~{200 * se:.0f} puntos "
+          f"o más.\n")
 
-    def fitness_fn(vector: list[float]) -> float:
+    def fitness_fn(vector: list[float], generation: int) -> float:
         profile = vector_to_profile(vector, name="__ga__")
         result = evaluate_profile(
             profile, games_per_matchup=games, workers=args.workers,
-            base_seed=args.seed, character=args.character, max_turns=args.turns)
+            base_seed=training_seed(args.seed, generation), character=args.character,
+            max_turns=args.turns)
+        return result.winrate
+
+    def validate_fn(vector: list[float]) -> float:
+        profile = vector_to_profile(vector, name="__ga__")
+        result = evaluate_profile(
+            profile, games_per_matchup=games, workers=args.workers,
+            base_seed=validation_seed(args.seed), character=args.character,
+            max_turns=args.turns)
         return result.winrate
 
     def on_generation(stats: ga.GenerationStats) -> None:
-        print(f"  gen {stats.generation:3d}  mejor={stats.best_fitness:6.1%}  "
-              f"media={stats.mean_fitness:6.1%}  peor={stats.worst_fitness:6.1%}")
+        validation = (f"validación={stats.validation_fitness:6.1%}"
+                     if stats.validation_fitness is not None else "validación=   n/d")
+        print(f"  gen {stats.generation:3d}  entrenamiento={stats.best_fitness:6.1%}  "
+              f"{validation}  media(entren.)={stats.mean_fitness:6.1%}")
 
     start = time.time()
     result = ga.run(
         fitness_fn, population_size=population, generations=generations,
         elite=min(args.elite, population), mutation_rate=args.mutation_rate,
         mutation_scale=args.mutation_scale, tournament_k=args.tournament_k,
-        seed=args.seed, on_generation=on_generation)
+        seed=args.seed, validate_fn=validate_fn, on_generation=on_generation)
     elapsed = time.time() - start
 
     name = args.name or f"optimizado-{args.character}"
@@ -87,15 +127,21 @@ def cmd_optimize(args: argparse.Namespace) -> int:
                    f"{len(GAUNTLET)} arquetipos.")
     best_profile = vector_to_profile(result.best.vector, name=name, description=description)
 
-    # Con más partidas por emparejamiento que durante la búsqueda: el ganador ya está
-    # elegido, así que aquí el gasto es en medirlo mejor, no en seguir buscando.
+    # Medición final: banda de semillas reservada, jamás usada ni en entrenamiento ni
+    # en la validación de la curva de convergencia (ver docstring de fitness.py). Con
+    # más partidas que durante la búsqueda: el ganador ya está elegido, así que aquí el
+    # gasto es en medirlo mejor, no en seguir buscando.
     final_games = max(games, _FINAL_EVAL_MIN_GAMES)
+    final_n = games_per_individual(final_games)
     breakdown = evaluate_profile(
         best_profile, games_per_matchup=final_games, workers=args.workers,
-        base_seed=args.seed + 999_983, character=args.character, max_turns=args.turns)
+        base_seed=final_eval_seed(args.seed), character=args.character, max_turns=args.turns)
 
     print(f"\nTerminado en {elapsed:.1f}s ({elapsed / max(1, generations):.1f}s/generación).")
-    print(f"Mejor perfil: {name}")
+    print(f"Mejor perfil: {name} (elegido por validación, no por el mejor de "
+          f"entrenamiento de ninguna generación -- ver cabecera del módulo)")
+    print(f"Medido en semillas RESERVADAS, nunca vistas en entrenamiento ni validación "
+          f"({final_n} partidas, error estándar ~{100 * standard_error(final_n):.1f} puntos):")
     print(f"  winrate (gauntlet completo):         {breakdown.winrate:6.1%}  "
           f"({breakdown.wins}/{breakdown.games})")
     print(f"  winrate SIN victoria por Misiones:    {breakdown.winrate_sin_mision:6.1%}  "

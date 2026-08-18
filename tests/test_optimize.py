@@ -14,7 +14,15 @@ from mistsim.agents import archetypes
 from mistsim.agents.profile import StrategyProfile
 from mistsim.io import serial
 from mistsim.optimize import ga
-from mistsim.optimize.fitness import GAUNTLET, evaluate_profile
+from mistsim.optimize.fitness import (
+    GAUNTLET,
+    evaluate_profile,
+    final_eval_seed,
+    games_per_individual,
+    standard_error,
+    training_seed,
+    validation_seed,
+)
 from mistsim.optimize.genome import (
     BOUNDS,
     DIMS,
@@ -160,6 +168,81 @@ def test_fitness_rejects_unknown_character():
         evaluate_profile(profile, games_per_matchup=1, workers=1, character="no-existe")
 
 
+# --- ruido de muestreo: error estándar y las tres bandas de semillas -----------------
+#
+# Estos tests capturan el problema metodológico señalado en revisión: seleccionar el
+# máximo de una población sobre un fitness medido con pocas partidas sesga al alza (el
+# "mejor" es en parte el más afortunado), y si además la semilla de evaluación es fija
+# durante toda la evolución, el GA puede sobreajustar ese único conjunto de partidas en
+# vez de aprender a jugar mejor. La corrección son tres bandas de semillas disjuntas
+# (entrenamiento por generación / validación fija / evaluación final reservada) — ver
+# `mistsim.optimize.fitness` y `mistsim.optimize.ga` para el razonamiento completo.
+
+
+def test_standard_error_matches_the_worst_case_proportion_formula():
+    assert standard_error(88) == pytest.approx((0.25 / 88) ** 0.5)
+    # Los números que se citan en el informe: ~5.3 puntos con --games 4 (n=88, el
+    # valor por defecto) y ~6.2 puntos con --games 3 (n=66).
+    assert standard_error(games_per_individual(4)) == pytest.approx(0.0533, abs=1e-3)
+    assert standard_error(games_per_individual(3)) == pytest.approx(0.0615, abs=1e-3)
+
+
+def test_standard_error_shrinks_as_games_grow():
+    small = standard_error(games_per_individual(1))
+    large = standard_error(games_per_individual(10))
+    assert large < small
+
+
+def test_games_per_individual_matches_the_documented_formula():
+    # gauntlet x 2 asientos x games_per_matchup
+    assert games_per_individual(4) == len(GAUNTLET) * 2 * 4
+
+
+def test_seed_bands_never_overlap_for_realistic_generation_counts():
+    """Entrenamiento, validación y evaluación final deben vivir en rangos disjuntos: es
+    la propiedad que impide que el GA sobreajuste una única muestra de partidas."""
+    # Cada generación usa como mucho ~220 000 semillas internas (11 rivales x 2 asientos
+    # x 10 000, ver evaluate_profile); dejamos margen generoso.
+    internal_spread = 300_000
+    for generation in (0, 1, 50, 500, 1999):
+        assert training_seed(0, generation) + internal_spread < validation_seed(0)
+    assert validation_seed(0) + internal_spread < final_eval_seed(0)
+    # Distintas generaciones caen en tramos distintos entre sí.
+    assert training_seed(0, 0) + internal_spread < training_seed(0, 1)
+
+
+def test_evaluate_profile_differs_across_seed_bands_within_noise_bounds():
+    """Dos evaluaciones del mismo perfil sobre rangos de semilla distintos (aquí:
+    entrenamiento de la generación 0 vs validación) deben dar números DISTINTOS -- las
+    semillas de verdad cambian qué partidas se juegan -- pero la diferencia debe caer
+    dentro de lo esperable por el ruido de muestreo. Existe justo para que nadie vuelva
+    a leer una diferencia de este tamaño como una mejora real de la estrategia.
+    """
+    profile = archetypes.get("equilibrado").clone(name="__candidato__")
+    games = 4
+    n = games_per_individual(games)
+    se = standard_error(n)
+
+    train = evaluate_profile(profile, games_per_matchup=games, workers=1,
+                             base_seed=training_seed(0, 0), character="vin", max_turns=25)
+    validation = evaluate_profile(profile, games_per_matchup=games, workers=1,
+                                  base_seed=validation_seed(0), character="vin", max_turns=25)
+    final = evaluate_profile(profile, games_per_matchup=games, workers=1,
+                             base_seed=final_eval_seed(0), character="vin", max_turns=25)
+
+    # Semillas distintas -> partidas distintas -> resultados distintos.
+    assert train.winrate != validation.winrate
+    assert train.winrate != final.winrate
+
+    # Pero no arbitrariamente distintos: por debajo de unos pocos errores estándar. Un
+    # bug que hiciera colisionar rangos de semillas o desincronizara asientos podría
+    # producir una diferencia mucho mayor que esto, y es justo lo que detectaría.
+    bound = 5 * se
+    assert abs(train.winrate - validation.winrate) < bound
+    assert abs(train.winrate - final.winrate) < bound
+    assert abs(validation.winrate - final.winrate) < bound
+
+
 # --- el bucle genético -----------------------------------------------------------------
 
 
@@ -193,10 +276,12 @@ def test_seed_population_larger_than_eleven_keeps_all_archetypes_and_fills_rest(
 
 def test_ga_run_with_synthetic_fitness_converges_towards_the_optimum():
     """El bucle evolutivo en sí, con una fitness sintética y barata (sin jugar
-    partidas): comprueba selección/cruce/mutación/elitismo con una señal limpia."""
+    partidas): comprueba selección/cruce/mutación/elitismo con una señal limpia.
+    `fitness_fn` recibe `(vector, generation)`; aquí es ciega a `generation` a
+    propósito, para aislar el mecanismo de selección del manejo de semillas."""
     target = [2.0] * DIMS
 
-    def fitness_fn(vector: list[float]) -> float:
+    def fitness_fn(vector: list[float], _generation: int) -> float:
         return -sum((a - b) ** 2 for a, b in zip(vector, target, strict=True))
 
     result = ga.run(fitness_fn, population_size=12, generations=15, elite=2,
@@ -206,12 +291,13 @@ def test_ga_run_with_synthetic_fitness_converges_towards_the_optimum():
     assert result.history[-1].best_fitness > result.history[len(result.history) // 2].best_fitness
 
 
-def test_ga_elitism_never_regresses_best_fitness():
-    """Con elitismo, `best_fitness` no puede empeorar nunca de una generación a la
-    siguiente -- es la propiedad que hace fiable "el optimizador mejora"."""
+def test_ga_elitism_never_regresses_training_best_fitness():
+    """Con elitismo, el mejor de entrenamiento de una generación no puede empeorar
+    respecto al de la anterior -- es la propiedad mecánica que hace `run` monótono
+    generación a generación cuando la señal de fitness es la misma."""
     rng = random.Random(5)
 
-    def noisy_fitness(vector: list[float]) -> float:
+    def noisy_fitness(vector: list[float], _generation: int) -> float:
         return sum(vector) + rng.uniform(-0.01, 0.01)
 
     result = ga.run(noisy_fitness, population_size=10, generations=10, elite=1, seed=2)
@@ -219,24 +305,107 @@ def test_ga_elitism_never_regresses_best_fitness():
     assert bests == sorted(bests)
 
 
+def test_ga_reevaluates_every_individual_every_generation():
+    """Cada generación debe usar su propia semilla: si `fitness_fn` devuelve un valor
+    distinto según `generation` para el MISMO vector, el `best_fitness` reportado tiene
+    que reflejarlo incluso para individuos que sobreviven por elitismo -- si el código
+    reutilizara el fitness ya calculado de un elite, esto fallaría."""
+    calls: list[int] = []
+
+    def fitness_fn(vector: list[float], generation: int) -> float:
+        calls.append(generation)
+        # Toda la población obtiene el mismo valor dentro de una generación (números
+        # aleatorios comunes), pero ese valor SUBE con la generación aunque el vector
+        # no cambie -- simula que cada generación juega partidas distintas.
+        return float(generation)
+
+    result = ga.run(fitness_fn, population_size=6, generations=4, elite=2, seed=0)
+
+    assert [g.best_fitness for g in result.history] == [0.0, 1.0, 2.0, 3.0]
+    # Se reevaluó la población entera en cada una de las 4 generaciones, elites
+    # incluidos: 6 individuos x 4 generaciones.
+    assert len(calls) == 6 * 4
+
+
+def test_ga_validation_fn_shields_best_result_from_a_single_generation_lucky_spike():
+    """Reproduce exactamente el sesgo reportado en revisión: una generación con una
+    muestra de entrenamiento inusualmente favorable (aquí, un ruido de +100 inyectado
+    sólo en la generación 1) no debe colar a su campeón como "el mejor de la corrida"
+    si `validate_fn` -- una remedición limpia, fuera de la presión de selección --
+    dice que en realidad no lo es.
+    """
+    def true_quality(vector: list[float]) -> float:
+        return sum(vector)
+
+    def fitness_fn(vector: list[float], generation: int) -> float:
+        noise = 100.0 if generation == 1 else 0.0
+        return true_quality(vector) + noise
+
+    def validate_fn(vector: list[float]) -> float:
+        return true_quality(vector)
+
+    result = ga.run(fitness_fn, population_size=12, generations=5, elite=2,
+                    mutation_rate=0.3, mutation_scale=0.3, seed=0, validate_fn=validate_fn)
+
+    gen1 = result.history[1]
+    # La generación 1 sí parece la mejor por entrenamiento (se le coló el ruido)...
+    assert gen1.best_fitness > max(g.best_fitness for i, g in enumerate(result.history)
+                                   if i != 1)
+    # ...pero su validación (limpia) la desenmascara: no es mejor que las demás.
+    assert gen1.validation_fitness < gen1.best_fitness - 50
+
+    # El resultado final se decide por validación, no por el máximo de entrenamiento:
+    # coincide con el máximo de la curva de validación, no con el de entrenamiento.
+    assert result.best.fitness == pytest.approx(max(g.validation_fitness for g in result.history))
+    assert result.best.fitness != pytest.approx(max(g.best_fitness for g in result.history))
+
+
+def test_ga_without_validate_fn_falls_back_to_training_fitness():
+    """Sin `validate_fn` (el caso de los tests sintéticos baratos de arriba),
+    `GenerationStats.validation_fitness` es `None` y `GAResult.best` cae de vuelta al
+    mejor de entrenamiento -- no debe romperse ni exigir el parámetro."""
+    def fitness_fn(vector: list[float], _generation: int) -> float:
+        return sum(vector)
+
+    result = ga.run(fitness_fn, population_size=6, generations=3, elite=1, seed=0)
+
+    assert all(g.validation_fitness is None for g in result.history)
+    assert result.best.fitness == pytest.approx(
+        max(g.best_fitness for g in result.history))
+
+
 def test_optimizer_improves_over_its_initial_population_on_real_games():
     """Integración de punta a punta con partidas de verdad: genoma -> perfil ->
-    `evaluate_profile` -> `run_batch` -> motor. Deliberadamente diminuto (población y
-    generaciones mínimas, `workers=1`) para que siga siendo un test, no una corrida de
-    optimización; la corrida de verdad se documenta en el informe del stream.
+    `evaluate_profile` -> `run_batch` -> motor, con las tres bandas de semillas
+    (entrenamiento por generación + validación fija) ya en uso. Deliberadamente
+    diminuto (población y generaciones mínimas, `workers=1`) para que siga siendo un
+    test, no una corrida de optimización; la corrida de verdad se documenta en el
+    informe del stream.
     """
-    def fitness_fn(vector: list[float]) -> float:
+    def fitness_fn(vector: list[float], generation: int) -> float:
         profile = vector_to_profile(vector, name="__candidato__")
-        result = evaluate_profile(profile, games_per_matchup=1, workers=1, base_seed=99,
+        result = evaluate_profile(profile, games_per_matchup=1, workers=1,
+                                  base_seed=training_seed(99, generation),
                                   character="vin", max_turns=20)
         return result.winrate
 
-    result = ga.run(fitness_fn, population_size=4, generations=2, elite=1, seed=1)
+    def validate_fn(vector: list[float]) -> float:
+        profile = vector_to_profile(vector, name="__candidato__")
+        result = evaluate_profile(profile, games_per_matchup=1, workers=1,
+                                  base_seed=validation_seed(99),
+                                  character="vin", max_turns=20)
+        return result.winrate
 
-    # El elitismo por sí solo ya garantiza esto (ver test_ga_elitism_never_regresses_
-    # best_fitness); aquí se comprueba además que todo el cableado real -- vector,
-    # perfil, gauntlet, run_batch, motor -- efectivamente produce números usables.
+    result = ga.run(fitness_fn, population_size=4, generations=2, elite=1, seed=1,
+                    validate_fn=validate_fn)
+
+    # El elitismo garantiza que best_fitness de entrenamiento no baje entre
+    # generaciones (ver test_ga_elitism_never_regresses_training_best_fitness); aquí se
+    # comprueba además que todo el cableado real -- vector, perfil, gauntlet,
+    # run_batch, motor, y las bandas de semillas -- efectivamente produce números
+    # usables y que el resultado final viene de la validación, no del entrenamiento.
     assert result.history[-1].best_fitness >= result.history[0].best_fitness
+    assert all(g.validation_fitness is not None for g in result.history)
     assert 0.0 <= result.best.fitness <= 1.0
 
 
@@ -258,4 +427,3 @@ def test_optimized_profile_is_playable_like_any_archetype(content):
     ])
 
     assert result.reason
-    assert result.players[0].strategy == "__candidato__"

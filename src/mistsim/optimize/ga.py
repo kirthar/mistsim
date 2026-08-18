@@ -3,6 +3,27 @@
 Sin dependencias externas (el proyecto no trae numpy): los genomas son `list[float]`
 normales y las operaciones, bucles de Python. Con 34 genes y poblaciones de decenas de
 individuos el coste de esto es irrelevante frente al de jugar las partidas del fitness.
+
+## Selección sobre fitness ruidoso: por qué se reevalúa toda la generación
+
+`fitness_fn` recibe `(vector, generation)`, no sólo `vector`: cada partida del gauntlet
+es una muestra finita, así que su resultado trae error de muestreo (ver
+`mistsim.optimize.fitness.standard_error`). Si se reutilizara el fitness ya calculado de
+un individuo (p.ej. los que pasan por elitismo) generación tras generación, ese
+individuo estaría compitiendo con una muestra vieja mientras el resto de la población
+compite con una nueva -- la comparación dejaría de ser justa. Por eso este módulo
+reevalúa la población ENTERA en cada generación: quien la llama debe variar la semilla
+según `generation` (números aleatorios comunes dentro de la generación, distintos entre
+generaciones) para que ningún individuo pueda sobreajustar un único conjunto fijo de
+partidas durante toda la evolución.
+
+Aun así, el máximo de una generación sigue sesgado al alza por la propia selección (el
+"mejor" de la muestra es en parte el más afortunado). Por eso `run` acepta también
+`validate_fn(vector) -> float`: una remedición del campeón de cada generación sobre una
+muestra FIJA que nunca participa en la selección. Esa es la curva de convergencia que
+hay que reportar, no `best_fitness` de entrenamiento -- y es también lo que decide cuál
+es el mejor individuo de toda la corrida (`GAResult.best`), para no heredar el sesgo de
+"el más afortunado en algún momento de N generaciones" hacia el resultado final.
 """
 from __future__ import annotations
 
@@ -15,7 +36,8 @@ from mistsim.agents import archetypes
 from mistsim.optimize.genome import clamp_vector, profile_to_vector
 
 Vector = list[float]
-FitnessFn = Callable[[Vector], float]
+FitnessFn = Callable[[Vector, int], float]
+ValidateFn = Callable[[Vector], float]
 
 
 @dataclass
@@ -31,6 +53,10 @@ class GenerationStats:
     mean_fitness: float
     worst_fitness: float
     best_vector: Vector
+    #: Remedición del campeón de esta generación sobre la muestra fija de validación,
+    #: fuera de la presión de selección. `None` si no se pasó `validate_fn` a `run`.
+    #: Es lo que hay que graficar como curva de convergencia, no `best_fitness`.
+    validation_fitness: float | None = None
 
 
 @dataclass
@@ -91,18 +117,28 @@ def run(
     mutation_scale: float = 0.2,
     tournament_k: int = 3,
     seed: int = 0,
+    validate_fn: ValidateFn | None = None,
     on_generation: Callable[[GenerationStats], None] | None = None,
 ) -> GAResult:
     """Evoluciona `population_size` individuos durante `generations` generaciones.
 
-    `fitness_fn` recibe un genoma (`list[float]`) y devuelve un `float` a maximizar —
-    quien orquesta decide qué significa (aquí, `FitnessResult.winrate`). `on_generation`
-    se llama al cerrar cada generación, para poder imprimir el progreso sin que este
-    módulo sepa nada de CLI ni de I/O.
+    `fitness_fn(vector, generation)` es la señal de SELECCIÓN: quien orquesta decide
+    qué semilla usar para cada `generation` (ver `mistsim.optimize.fitness.
+    training_seed`) para que la comparación dentro de una generación sea justa (números
+    aleatorios comunes) sin que el GA pueda memorizar un único conjunto de partidas
+    durante toda la corrida. La población entera se reevalúa cada generación -- ver el
+    docstring del módulo para por qué eso es necesario y no sólo un despilfarro.
 
-    El elitismo (los `elite` mejores pasan intactos) garantiza que `best_fitness` nunca
-    empeora de una generación a la siguiente: es la propiedad que explota el test de
-    "el optimizador mejora sobre su población inicial".
+    `validate_fn(vector)`, si se da, remide al campeón de cada generación sobre una
+    muestra fija ajena a la selección: alimenta `GenerationStats.validation_fitness`
+    (la curva de convergencia real) y decide `GAResult.best` en vez de `best_fitness`
+    de entrenamiento, que está sesgado al alza por construcción. Sin `validate_fn`,
+    ambas cosas caen de vuelta al fitness de entrenamiento (útil para tests con una
+    fitness sintética y barata que no necesita ese cuidado).
+
+    El elitismo (los `elite` mejores de cada generación, por fitness de ENTRENAMIENTO,
+    pasan a la siguiente) es sobre la selección, no sobre el reporte: sigue siendo la
+    forma correcta de no perder progreso de una generación a la siguiente.
     """
     if elite < 0 or elite > population_size:
         raise ValueError("elite debe estar entre 0 y population_size")
@@ -111,29 +147,39 @@ def run(
     population = [Individual(v) for v in seed_population(population_size, rng)]
     history: list[GenerationStats] = []
     best: Individual | None = None
+    best_score = float("-inf")
 
     for gen in range(generations):
+        # Reevaluar SIEMPRE la población entera, elites incluidos: cada generación usa
+        # su propia banda de semillas (ver docstring del módulo), así que un fitness
+        # calculado en una generación anterior no es comparable con el de esta.
         for ind in population:
-            if ind.fitness is None:
-                ind.fitness = fitness_fn(ind.vector)
+            ind.fitness = fitness_fn(ind.vector, gen)
 
         ranked = sorted(population, key=lambda ind: ind.fitness, reverse=True)
         fits = [ind.fitness for ind in ranked]
+        validation_fitness = validate_fn(ranked[0].vector) if validate_fn is not None else None
         stats = GenerationStats(
             generation=gen, best_fitness=ranked[0].fitness,
             mean_fitness=statistics.fmean(fits), worst_fitness=ranked[-1].fitness,
-            best_vector=list(ranked[0].vector),
+            best_vector=list(ranked[0].vector), validation_fitness=validation_fitness,
         )
         history.append(stats)
-        if best is None or ranked[0].fitness > best.fitness:
-            best = Individual(list(ranked[0].vector), ranked[0].fitness)
+
+        # El "mejor de toda la corrida" se decide con la métrica que no está sesgada
+        # por la selección: validación si la hay, entrenamiento si no.
+        score = validation_fitness if validation_fitness is not None else ranked[0].fitness
+        if score > best_score:
+            best_score = score
+            best = Individual(list(ranked[0].vector), score)
+
         if on_generation is not None:
             on_generation(stats)
 
         if gen == generations - 1:
             break
 
-        next_gen = [Individual(list(ind.vector), ind.fitness) for ind in ranked[:elite]]
+        next_gen = [Individual(list(ind.vector)) for ind in ranked[:elite]]
         while len(next_gen) < population_size:
             parent_a = _tournament(ranked, tournament_k, rng)
             parent_b = _tournament(ranked, tournament_k, rng)
