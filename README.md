@@ -125,15 +125,17 @@ cartas, y el personaje es un modificador.
 Liguilla de 12 partidas por emparejamiento (`mistsim tourney -n 12 -s 100`):
 
 ```
-muro-defender      55.8%      equilibrado        51.7%
-aggro-combate      55.0%      motor-riot         49.2%
-recursion-hierro   55.0%      rampa-economica    49.2%
-adelgazar          51.7%      motor-robo         47.5%
-combo-atium        51.7%      tempo-seek         42.5%
-                              rush-mision        40.8%
+recursion-hierro   65.0%      rampa-economica    50.8%
+tempo-seek         57.5%      muro-defender      49.2%
+aggro-combate      55.0%      motor-riot         48.3%
+adelgazar          52.5%      equilibrado        41.7%
+motor-robo         50.8%      combo-atium        40.0%
+                              rush-mision        39.2%
 ```
 
-Reparto de 15 puntos, sin estrategias dominantes ni muertas.
+Sin estrategias dominantes ni muertas. **Estos números se han movido tres veces** según
+se han ido corrigiendo fallos del motor; es lo esperable mientras el motor madura, y
+por eso conviene re-medirlos tras cada corrección en vez de citar los de un README viejo.
 
 **Aviso:** en batch a 3 jugadores el 84% de las partidas termina por completar las tres
 Misiones. Es consecuencia directa de que los valores de las Misiones son homebrew, así
@@ -151,6 +153,22 @@ ruff check src tests scripts
 Los invariantes se comprueban al final de **cada turno** de partidas completas a 2, 3 y
 4 jugadores y en coop: ninguna carta se duplica ni se pierde entre zonas, la salud se
 mantiene en 0-40 y las monedas nunca son negativas.
+
+## Huecos conocidos del motor
+
+- **No hay reacción fuera de turno.** Seis cartas tienen habilidad `off_turn` —tres
+  `Cloud` que reducen daño, una que protege a un Aliado y dos `Sense` que bloquean el
+  avance rival en una Misión— y el motor nunca las juega: no existe ventana de reacción
+  durante el turno ajeno. `mistsim cards` las muestra, pero en simulación no hacen nada.
+- **`repeat_own_top_ability`** (secundaria de Seeker) no está implementada: haría falta
+  recordar el último objetivo de Seek dentro de la cadena.
+- **Las penalizaciones permanentes de Adversario** (`block_seek`, `block_pull`…) se
+  recopilan en `lord_ruler.permanent_penalties()` pero `legal_actions` no las consulta.
+
+Ninguno de estos falla en silencio: emiten un evento `effect-unimplemented`, así que
+`log.of_kind("effect-unimplemented")` dice exactamente qué se está perdiendo en una
+partida dada. Un no-op callado es indistinguible de un efecto que funciona, y esa clase
+de fallo ya ha falseado este simulador varias veces.
 
 ## Decisiones de reglas
 

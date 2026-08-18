@@ -184,15 +184,30 @@ def _sense(ctx: EffectContext, value: int) -> None:
     ctx.log.emit("sense", ctx.player.id, value=value, source=ctx.source)
 
 
+def unimplemented(ctx: EffectContext, key: str) -> None:
+    """Registra un efecto que el motor todavía no sabe aplicar.
+
+    Un no-op silencioso es indistinguible de un efecto que funciona, y esa clase de
+    fallo ya ha falseado este simulador varias veces. Emitir el hueco lo hace contable:
+    `log.of_kind("effect-unimplemented")` dice exactamente qué se está perdiendo.
+    """
+    ctx.log.emit("effect-unimplemented", ctx.player.id, effect=key, source=ctx.source)
+
+
 @effect("cloud")
 def _cloud(ctx: EffectContext, value: int) -> None:
-    """Copper: reduce daño entrante. Se juega fuera de turno, así que se difiere."""
-    ctx.deferred.append(("cloud", value))
+    """Copper: reduce daño entrante.
+
+    SIN IMPLEMENTAR: es un efecto de fuera de turno y el motor no tiene todavía ventana
+    de reacción durante el turno ajeno.
+    """
+    unimplemented(ctx, "cloud")
 
 
 @effect("cloud_protect_ally")
 def _cloud_protect_ally(ctx: EffectContext, value: Any) -> None:
-    ctx.deferred.append(("cloud_protect_ally", True))
+    """SIN IMPLEMENTAR: mismo motivo que `cloud`, necesita reacción fuera de turno."""
+    unimplemented(ctx, "cloud_protect_ally")
 
 
 @effect("seek")

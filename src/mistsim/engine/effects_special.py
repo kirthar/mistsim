@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mistsim.engine.effects import EffectContext, effect, resolve
+from mistsim.engine.effects import EffectContext, effect, resolve, unimplemented
 
 # --- matar Aliados -----------------------------------------------------------
 
@@ -205,8 +205,14 @@ def _refresh_metal(ctx: EffectContext, value: Any) -> None:
 
 @effect("repeat_own_top_ability")
 def _repeat_top(ctx: EffectContext, value: Any) -> None:
-    """Seeker: repite la primaria de la misma Acción que acaba de usar su Seek."""
-    ctx.deferred.append(("repeat_last_seek", True))
+    """Seeker: repite la primaria de la misma Acción que acaba de usar su Seek.
+
+    SIN IMPLEMENTAR: requiere recordar cuál fue el último objetivo de Seek dentro de la
+    cadena, que hoy no se guarda. Se registra el hueco en vez de callarlo: un efecto que
+    no hace nada en silencio es indistinguible de uno que funciona, y así al menos sale
+    en el log y en el recuento de `effect-unimplemented`.
+    """
+    unimplemented(ctx, "repeat_own_top_ability")
 
 
 @effect("win_game")
@@ -220,20 +226,30 @@ def _win(ctx: EffectContext, value: Any) -> None:
 # --- recompensas de Misión y efectos del Lord Ruler --------------------------
 
 
+def _grant_permanent(ctx: EffectContext, key: str, value: int) -> None:
+    """Recompensa permanente de Misión: se acumula en `player.permanents`.
+
+    `turn.start_turn` lee `permanents["coin"]` y `turn.end_turn` lee
+    `permanents["draw"]`, así que basta con escribirlo aquí.
+    """
+    ctx.player.permanents[key] = ctx.player.permanents.get(key, 0) + value
+    ctx.log.emit("permanent-gained", ctx.player.id, effect=key, value=value,
+                 total=ctx.player.permanents[key], source=ctx.source)
+
+
 @effect("permanent_coin_per_turn")
 def _perm_coin(ctx: EffectContext, value: int) -> None:
-    ctx.player.used_once_per_turn.discard("perm_coin")
-    ctx.deferred.append(("permanent", ("coin", value)))
+    _grant_permanent(ctx, "coin", value)
 
 
 @effect("permanent_draw_per_turn")
 def _perm_draw(ctx: EffectContext, value: int) -> None:
-    ctx.deferred.append(("permanent", ("draw", value)))
+    _grant_permanent(ctx, "draw", value)
 
 
 @effect("permanent_refresh_per_turn")
 def _perm_refresh(ctx: EffectContext, value: int) -> None:
-    ctx.deferred.append(("permanent", ("refresh", value)))
+    _grant_permanent(ctx, "refresh", value)
 
 
 @effect("destroy_adversary_shield")
@@ -296,12 +312,21 @@ def _burn_penalty(ctx: EffectContext, value: int) -> None:
     ctx.player.tokens.burn_limit = max(1, ctx.player.tokens.burn_limit - value)
 
 
-@effect("block_ally_activation", "block_seek", "block_pull", "block_sense",
-        "block_market_buy_above", "collective_damage")
-def _noted_only(ctx: EffectContext, value: Any) -> None:
-    """Efectos de Adversario/Edicto que el motor de coop aplica en su propio flujo.
+@effect("collective_damage")
+def _collective_damage_fallback(ctx: EffectContext, value: Any) -> None:
+    """El daño colectivo lo reparte `lord_ruler._resolve_edict` antes de llamar aquí.
 
-    Se registran aquí para que `resolve` no los trate como desconocidos; quien los
-    consume es engine/lord_ruler.py, que sí tiene el contexto para aplicarlos.
+    Este resolutor sólo se alcanza si un Adversario lo lleva, que hoy no ocurre.
     """
-    ctx.deferred.append(("lord_ruler_effect", value))
+    unimplemented(ctx, "collective_damage")
+
+
+@effect("block_ally_activation", "block_seek", "block_pull", "block_sense",
+        "block_market_buy_above")
+def _blocking_penalty(ctx: EffectContext, value: Any) -> None:
+    """SIN IMPLEMENTAR: penalizaciones permanentes de Adversario.
+
+    `lord_ruler.permanent_penalties()` las recopila, pero `legal_actions` todavía no las
+    consulta, así que un Adversario que debería bloquear Seek o Pull no bloquea nada.
+    """
+    unimplemented(ctx, str(value) if isinstance(value, str) else "block_*")

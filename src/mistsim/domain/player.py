@@ -87,12 +87,20 @@ class Player:
         return drawn
 
     def cleanup(self, rng: random.Random) -> list[CardInstance]:
-        """Fin de turno: todo lo jugado y la mano sobrante al descarte. Los Aliados quedan."""
+        """Fin de turno: todo lo jugado y la mano sobrante al descarte. Los Aliados quedan.
+
+        Reinicia el estado de turno de TODAS las cartas, no sólo de los Aliados. Las
+        marcas `primary_activated` y `activations_used` son por turno; si una carta se
+        las lleva al descarte, al volver a robarla no puede activar su primaria nunca
+        más — y peor, puede activar su secundaria sin haber pagado la primaria. Se
+        recorren todas las zonas porque una carta puede haber salido del área de juego
+        por otras vías (Pull al mazo, Soothe al montón de eliminadas).
+        """
         self.discard.extend(self.in_play)
         self.discard.extend(self.hand)
         self.in_play = []
         self.hand = []
-        for inst in self.allies:
+        for inst in self.all_cards():
             inst.reset_turn()
         return self.discard
 
