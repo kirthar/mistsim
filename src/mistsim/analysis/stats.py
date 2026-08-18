@@ -255,3 +255,17 @@ def control_fdr(estimates: list[Estimate], alpha: float = 0.05) -> int:
         running = min(running, estimate.p_value * total / rank)
         estimate.q_value = running
     return sum(1 for e in scored if e.q_value <= alpha)
+
+
+def z_for_two_sided_p(p: float) -> float:
+    """z tal que erfc(z/√2) = p. Por bisección, que sobra para un aviso de potencia."""
+    if not 0.0 < p < 1.0:
+        return math.inf
+    low, high = 0.0, 40.0
+    for _ in range(200):
+        mid = (low + high) / 2
+        if math.erfc(mid / math.sqrt(2)) > p:
+            low = mid
+        else:
+            high = mid
+    return (low + high) / 2

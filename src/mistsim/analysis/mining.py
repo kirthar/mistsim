@@ -408,6 +408,38 @@ class ConfounderCheck:
     pairs: int
 
 
+@dataclass(frozen=True)
+class PowerHint:
+    """Cuánto corpus falta para que el mejor candidato pase el filtro."""
+
+    best_z: float
+    z_needed: float
+    #: Por cuánto habría que multiplicar el número de partidas.
+    factor: float
+    best: tuple[str, ...] | None
+
+
+def power_hint(results: Sequence, alpha: float = 0.05) -> PowerHint:
+    """Traduce "no ha salido nada" en "hacen falta N veces más partidas".
+
+    La varianza del log-lift va como 1/N, así que z va como √N: multiplicar el corpus
+    por (z_necesaria / z_actual)² pone al mejor candidato justo en el umbral. Es una
+    cuenta de servilleta —supone que el efecto es real y del tamaño estimado— pero
+    convierte un informe vacío en una instrucción concreta.
+    """
+    measured = [r for r in results if r.synergy.estimated and r.synergy.variance > 0]
+    if not measured:
+        return PowerHint(math.nan, math.nan, math.nan, None)
+    def z_of(r) -> float:
+        return abs(r.synergy.log_lift) / math.sqrt(r.synergy.variance)
+    best = max(measured, key=z_of)
+    # Umbral de Benjamini-Hochberg en el primer puesto: alpha / m.
+    z_needed = stats.z_for_two_sided_p(alpha / len(measured))
+    best_z = z_of(best)
+    factor = (z_needed / best_z) ** 2 if best_z > 0 else math.inf
+    return PowerHint(best_z, z_needed, factor, best.cards)
+
+
 def cost_correlation(pairs: Sequence[PairResult]) -> ConfounderCheck:
     """Control de sanidad central del módulo.
 

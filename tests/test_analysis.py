@@ -677,3 +677,29 @@ def test_la_replicacion_no_parte_una_partida_entre_las_dos_mitades():
     juegos_pares = {o.game for o in rows if o.game % 2 == 0}
     assert all(g % 2 == 0 for g in juegos_pares)
     assert rep.checked >= 0  # la firma aguanta un corpus degenerado sin reventar
+
+
+def test_el_aviso_de_potencia_traduce_un_informe_vacio_en_un_numero_de_partidas():
+    """"No ha salido nada" es inútil; "hacen falta 4× partidas" es accionable."""
+    rng = random.Random(51)
+    rows = synthetic(rng, 3000, p_a=0.5, p_b=0.5, base=0.15, effect_a=1.1,
+                     effect_b=1.1, interaction=1.5, filler=3)
+    index = mining.build_index(rows, size_control=False)
+    pairs = mining.mine_pairs(index, min_support=20)
+    hint = mining.power_hint(pairs)
+    assert hint.best is not None
+    # El umbral del primer puesto de BH es alpha/m, mucho más exigente que el 5% suelto.
+    assert hint.z_needed > stats.Z95
+    assert hint.factor > 0
+
+    # Con más corpus del mismo modelo causal, el factor tiene que bajar.
+    grande = mining.build_index(
+        synthetic(random.Random(51), 24000, p_a=0.5, p_b=0.5, base=0.15, effect_a=1.1,
+                  effect_b=1.1, interaction=1.5, filler=3), size_control=False)
+    hint_grande = mining.power_hint(mining.mine_pairs(grande, min_support=20))
+    assert hint_grande.factor < hint.factor
+
+
+def test_z_para_una_p_bilateral_invierte_la_normal():
+    assert stats.z_for_two_sided_p(0.05) == pytest.approx(1.96, abs=0.01)
+    assert stats.z_for_two_sided_p(0.01) == pytest.approx(2.576, abs=0.01)

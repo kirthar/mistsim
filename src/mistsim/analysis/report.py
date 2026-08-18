@@ -290,6 +290,7 @@ def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
     measured = [p for p in pairs if p.synergy.estimated]
     cal = calibration(pairs)
     check = cost_correlation(pairs)
+    hint = mining.power_hint(pairs)
     inconclusos = len(significant) - len(robust)
     trios_robustos = sum(1 for t in triples if t.synergy.robust(min_support=20))
     return [
@@ -298,14 +299,15 @@ def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
         RULE,
         f"· De {len(pairs)} pares con soporte, {len(measured)} llegaron a tener algún",
         "  estrato con las cuatro celdas pobladas. El resto sale n/d, que NO es lift 1.",
-        f"· De esos {len(measured)}, {len(robust)} pasan los cuatro criterios (soporte, IC",
-        "  fuera del 1, IC utilizable y q de Benjamini-Hochberg). SÓLO ÉSOS son citables.",
-        f"· Otros {inconclusos} tienen el IC fuera del 1 pero no sobreviven a la corrección",
-        "  por multiplicidad o traen un intervalo demasiado ancho. Sirven para dirigir el",
+        f"· De esos {len(measured)}, sólo {len(robust)} pasan los cuatro criterios: soporte,",
+        "  IC fuera del 1, IC utilizable y q de Benjamini-Hochberg. SÓLO ÉSOS son citables.",
+        f"· Otros {inconclusos} tienen el IC fuera del 1 pero no sobreviven a la corrección por",
+        "  multiplicidad, o traen un intervalo demasiado ancho. Sirven para dirigir el",
         "  siguiente lote, no para concluir nada.",
-        f"· Tríos: {trios_robustos} robustos de {len(triples)} con soporte. El soporte de un trío",
-        "  cae con el cubo de la rareza; aquí la respuesta honesta casi siempre es",
-        "  'hace falta más corpus'.",
+        f"· Tríos: {trios_robustos} robustos de {len(triples)} con soporte. El soporte "
+        "de un trío cae",
+        "  con el cubo de la rareza; aquí la respuesta honesta casi siempre es que hace",
+        "  falta más corpus.",
         f"· El ajuste cambia el ranking de verdad: ρ con el coste pasa de "
         f"{check.naive_vs_cost:+.3f} a",
         f"  {check.synergy_vs_cost:+.3f}, y los dos rankings sólo correlacionan "
@@ -315,6 +317,15 @@ def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
            if cal.well_centred else
            "DESPLAZADA: queda confusor y nada de arriba es citable."),
         "",
+    ] + ([] if len(robust) >= 5 or not hint.best else [
+        f"· Cuánto corpus falta: el mejor candidato es {hint.best[0]} + {hint.best[1]}, que va",
+        f"  con z = {hint.best_z:.2f} y necesita {hint.z_needed:.2f} para pasar la FDR "
+        "en el primer puesto.",
+        f"  La z crece con √N, así que harían falta ~{hint.factor:.1f}× las partidas "
+        "de este corpus.",
+        "  Si ese número sale enorme, el efecto es pequeño y no compensa perseguirlo.",
+        "",
+    ]) + [
         "Salvedades que NO se arreglan con más partidas:",
         "· Nada que dependa del ritmo de las Misiones es fiable: son datos homebrew y hoy",
         "  deciden casi todas las partidas.",
@@ -323,8 +334,9 @@ def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
         "  pero implica que un par que ninguna regla favorece necesita muchas más partidas",
         "  para alcanzar la misma precisión. Los pares 'sin regla' están medidos peor.",
         "· En PvP los asientos de una misma partida no son independientes: gana uno solo.",
-        f"  Con {index.observations} asientos el efecto es pequeño frente al ancho de los",
-        "  intervalos, pero los IC de arriba son algo optimistas.",
+        f"  Con {index.observations} asientos el efecto es pequeño frente al ancho "
+        "de los intervalos,",
+        "  pero los IC de arriba son algo optimistas.",
         "· El control por tamaño de mazo es en parte un mediador, no sólo un confusor: si",
         "  un combo te mantiene vivo y por eso compras más, controlarlo se come parte del",
         "  efecto. La pregunta que responde el ranking es la del constructor de mazos —'a",
