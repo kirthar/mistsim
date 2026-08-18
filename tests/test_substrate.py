@@ -369,3 +369,19 @@ def test_cli_runs_end_to_end(capsys):
 
     assert main(["cards", "Rebel"]) == 0
     assert "riot" in capsys.readouterr().out
+
+
+def test_result_records_its_mode_and_player_count(content):
+    """El análisis estratifica por modo; deducirlo del motivo de fin es frágil."""
+    from mistsim.agents.utility import make
+
+    for mode, expected in ((Mode.PVP, "pvp"), (Mode.COOP, "coop")):
+        engine = GameEngine(content=content,
+                            config=GameConfig(mode=mode, num_players=3, max_turns=15),
+                            seed=2)
+        result = engine.run([make("equilibrado", i) for i in range(3)])
+        assert result.mode == expected
+        assert result.num_players == 3
+
+        back = serial.result_from_dict(serial.result_to_dict(result))
+        assert (back.mode, back.num_players) == (expected, 3)

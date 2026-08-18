@@ -49,6 +49,10 @@ class GameResult:
     reason: str
     turns: int
     log: EventLog
+    #: Modo de la partida ("pvp" / "coop"). Se persiste para que el análisis pueda
+    #: estratificar por él sin tener que deducirlo del motivo de fin.
+    mode: str = "pvp"
+    num_players: int = 0
     final_health: dict[int, int] = field(default_factory=dict)
     mission_positions: dict[str, dict[int, int]] = field(default_factory=dict)
     players: list[PlayerResult] = field(default_factory=list)
@@ -171,6 +175,8 @@ class GameEngine:
             reason=reason,
             turns=state.turn,
             log=self.log,
+            mode=str(state.config.mode),
+            num_players=state.config.num_players,
             final_health={p.id: p.health for p in state.players},
             mission_positions={
                 t.mission.name: dict(t.positions) for t in state.tracks

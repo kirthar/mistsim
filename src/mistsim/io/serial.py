@@ -77,6 +77,8 @@ def result_to_dict(result: GameResult, *, include_log: bool = True) -> dict[str,
         "winner": result.winner,
         "reason": result.reason,
         "turns": result.turns,
+        "mode": result.mode,
+        "num_players": result.num_players,
         "final_health": {str(k): v for k, v in result.final_health.items()},
         "mission_positions": {
             track: {str(p): v for p, v in positions.items()}
@@ -94,6 +96,8 @@ def result_from_dict(raw: dict[str, Any]) -> GameResult:
         winner=raw.get("winner"),
         reason=raw["reason"],
         turns=raw["turns"],
+        mode=raw.get("mode", "pvp"),
+        num_players=raw.get("num_players", 0),
         log=log_from_list(raw.get("log") or []),
         final_health={int(k): v for k, v in (raw.get("final_health") or {}).items()},
         mission_positions={
