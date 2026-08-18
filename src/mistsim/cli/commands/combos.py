@@ -48,6 +48,12 @@ def cmd_combos(args: argparse.Namespace) -> int:
         print("El corpus está vacío.", file=sys.stderr)
         return 1
 
+    # El desglose de un par no necesita minar los 2 080; se atiende y se sale.
+    if args.explain:
+        print(report.explain_section(index, args.explain[0], args.explain[1],
+                                     args.min_cell))
+        return 0
+
     pairs = mining.mine_pairs(index, min_support=args.min_support,
                               min_cell=args.min_cell, costs=content_costs)
     rules.annotate(pairs)
@@ -130,5 +136,7 @@ def register(subparsers) -> None:
                         help="no estratificar por tamaño de mazo (para ver cuánto cambia)")
     parser.add_argument("--no-triples", action="store_true")
     parser.add_argument("--top", type=int, default=25, help="filas por sección")
+    parser.add_argument("--explain", nargs=2, metavar=("CARTA", "CARTA"),
+                        help="desglosa un par estrato a estrato en vez de minar todo")
     parser.add_argument("--json", metavar="RUTA.json", help="vuelca el ranking completo")
     parser.set_defaults(func=cmd_combos)

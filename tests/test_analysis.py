@@ -603,3 +603,42 @@ def test_el_diagnostico_del_confusor_separa_los_dos_rankings():
     check = mining.cost_correlation(mining.mine_pairs(index, min_support=20))
     assert check.pairs > 0
     assert math.isnan(check.naive_vs_cost) or -1.0 <= check.naive_vs_cost <= 1.0
+
+
+def test_el_desglose_por_estrato_cuadra_con_la_estimacion_agregada():
+    """Auditar un par es la única forma de discutir una discrepancia con las reglas.
+
+    Casi siempre el desacuerdo no es estadístico: es que el par sólo tiene soporte en
+    dos estratos, o que uno con seis observaciones tira del resto.
+    """
+    rows = poblacion_con_confusor_de_dinero()
+    index = mining.build_index(rows, size_control=True, size_buckets=2)
+    desglose = mining.explain_pair(index, "A", "B", min_cell=5)
+    usados = [d for d in desglose if d.used]
+    assert len(usados) == 2, "los dos estratos, el pobre y el rico"
+    # Las celdas de cada estrato suman todas sus observaciones.
+    for fila in usados:
+        total = fila.both.n + fila.only_a.n + fila.only_b.n + fila.neither.n
+        stratum = next(s for s in index.strata if s.key == fila.key)
+        assert total == stratum.size
+    # Y el agregado del desglose es exactamente el que publica el ranking.
+    agregado = stats.estimate_from_strata(
+        [(d.both, d.only_a, d.only_b, d.neither) for d in desglose], min_cell=5)
+    ranking = {p.cards: p for p in mining.mine_pairs(index, min_support=20)}[("A", "B")]
+    assert agregado.lift == pytest.approx(ranking.synergy.lift)
+    assert agregado.support == ranking.synergy.support
+    # El estrato con más datos pesa más que el escuálido.
+    rico = max(usados, key=lambda d: d.both.n)
+    pobre = min(usados, key=lambda d: d.both.n)
+    assert rico.weight > pobre.weight
+
+
+def test_el_informe_marca_los_pares_sin_medicion_como_n_d():
+    rows = population(["A", "B"], 30, 30) + population(["C"], 40, 40)
+    index = mining.build_index(rows, size_control=False)
+    # min_cell alto: ningún estrato tiene las cuatro celdas, así que no hay medición.
+    pairs = mining.mine_pairs(index, min_support=10, min_cell=1000)
+    texto = report.render(index, pairs, [], [], corpus_path="x", size_control=False,
+                          top=5, min_support=10)
+    assert "n/d" in texto
+    assert not any(p.synergy.estimated for p in pairs)

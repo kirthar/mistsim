@@ -209,6 +209,46 @@ def mine_pairs(index: Index, *, min_support: int = 30, min_cell: int = 5,
     return results
 
 
+@dataclass(frozen=True)
+class StratumBreakdown:
+    """Lo que aporta un estrato concreto a la estimación de un par."""
+
+    key: StratumKey
+    both: Cell
+    only_a: Cell
+    only_b: Cell
+    neither: Cell
+    log_lift: float
+    variance: float
+    used: bool
+
+    @property
+    def weight(self) -> float:
+        return 1.0 / self.variance if self.variance > 0 else 0.0
+
+
+def explain_pair(index: Index, a: str, b: str, *, min_cell: int = 5
+                 ) -> list[StratumBreakdown]:
+    """Desglose estrato a estrato de un par.
+
+    Existe para poder discutir una discrepancia con las reglas escritas a mano sin
+    creerse el número agregado: casi siempre el desacuerdo es que el par sólo tiene
+    soporte en dos estratos, o que un estrato con 6 observaciones tira del resto.
+    """
+    out = []
+    for stratum in index.strata:
+        mask_a, mask_b = stratum.mask(a), stratum.mask(b)
+        if not mask_a and not mask_b:
+            continue
+        both, only_a, only_b, neither = stratum.cells(mask_a, mask_b)
+        used = min(both.n, only_a.n, only_b.n, neither.n) >= min_cell
+        psi, var = stats.interaction(both, only_a, only_b, neither)
+        out.append(StratumBreakdown(stratum.key, both, only_a, only_b, neither,
+                                    psi, var, used))
+    out.sort(key=lambda s: (-s.both.n, s.key))
+    return out
+
+
 # --- tríos -------------------------------------------------------------------
 
 

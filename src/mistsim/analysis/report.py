@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
+from mistsim.analysis import mining, stats
 from mistsim.analysis.mining import (
     Index,
     PairResult,
@@ -258,38 +259,82 @@ def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
     measured = [p for p in pairs if p.synergy.estimated]
     cal = calibration(pairs)
     check = cost_correlation(pairs)
+    inconclusos = len(significant) - len(robust)
+    trios_robustos = sum(1 for t in triples if t.synergy.robust(min_support=20))
     return [
         RULE,
         "QUÉ ES ROBUSTO Y QUÉ NO",
         RULE,
-        f"· {len(measured)} pares de {len(pairs)} con soporte llegaron a tener algún estrato",
-        "  con las cuatro celdas pobladas; el resto sale como n/d, que NO es lift 1.",
-        f"· {len(robust)} de esos {len(measured)} pasan los tres criterios. Sólo ésos",
-        "  son citables. El resto es dirección, no magnitud.",
-        f"· {len(significant) - len(robust)} pares tienen el IC fuera del 1 pero con intervalo",
-        "  demasiado ancho o soporte corto: sospechosos útiles para dirigir el próximo lote,",
-        "  no conclusiones.",
-        f"· Los tríos: {sum(1 for t in triples if t.synergy.robust(min_support=20))} robustos de",
-        f"  {len(triples)}. El soporte de un trío cae con el cubo de la rareza, así que aquí la",
-        "  respuesta honesta casi siempre es 'hace falta más corpus'.",
-        f"· El ajuste cambia el ranking de verdad: ρ(coste) pasa de "
-        f"{check.naive_vs_cost:+.3f} a {check.synergy_vs_cost:+.3f}, y los dos rankings",
-        f"  sólo correlacionan {check.naive_vs_synergy:+.3f} entre sí.",
+        f"· De {len(pairs)} pares con soporte, {len(measured)} llegaron a tener algún",
+        "  estrato con las cuatro celdas pobladas. El resto sale n/d, que NO es lift 1.",
+        f"· De esos {len(measured)}, {len(robust)} pasan los cuatro criterios (soporte, IC",
+        "  fuera del 1, IC utilizable y q de Benjamini-Hochberg). SÓLO ÉSOS son citables.",
+        f"· Otros {inconclusos} tienen el IC fuera del 1 pero no sobreviven a la corrección",
+        "  por multiplicidad o traen un intervalo demasiado ancho. Sirven para dirigir el",
+        "  siguiente lote, no para concluir nada.",
+        f"· Tríos: {trios_robustos} robustos de {len(triples)} con soporte. El soporte de un trío",
+        "  cae con el cubo de la rareza; aquí la respuesta honesta casi siempre es",
+        "  'hace falta más corpus'.",
+        f"· El ajuste cambia el ranking de verdad: ρ con el coste pasa de "
+        f"{check.naive_vs_cost:+.3f} a",
+        f"  {check.synergy_vs_cost:+.3f}, y los dos rankings sólo correlacionan "
+        f"{check.naive_vs_synergy:+.3f} entre sí.",
         f"· Calibración: mediana del lift {cal.median_lift:.3f}. "
-        + ("Centrada, el ajuste parece completo."
+        + ("Centrada; el ajuste parece completo."
            if cal.well_centred else
-           "DESPLAZADA: hay confusor sin controlar y nada de lo de arriba es citable."),
-        "· NO es robusto nada que dependa del ritmo de las Misiones: son datos homebrew.",
+           "DESPLAZADA: queda confusor y nada de arriba es citable."),
+        "",
+        "Salvedades que NO se arreglan con más partidas:",
+        "· Nada que dependa del ritmo de las Misiones es fiable: son datos homebrew y hoy",
+        "  deciden casi todas las partidas.",
         "· El corpus lo juega el `UtilityAgent`, que ya compra guiado por `synergy.RULES`.",
-        "  Eso sesga QUÉ pares llegan a tener soporte, no el contraste dentro del estrato,",
-        "  pero significa que un par que ninguna regla favorece necesita más partidas para",
-        "  llegar al mismo soporte. Los pares 'sin regla' están, por construcción, medidos",
-        "  con menos precisión que los predichos.",
-        "· En PvP los asientos de una misma partida no son independientes (gana uno solo),",
-        f"  así que los IC de arriba son algo optimistas. Con {index.observations} asientos el",
-        "  efecto es pequeño frente al ancho de los intervalos, pero está.",
+        "  Eso sesga QUÉ pares llegan a tener soporte —no el contraste dentro del estrato—,",
+        "  pero implica que un par que ninguna regla favorece necesita muchas más partidas",
+        "  para alcanzar la misma precisión. Los pares 'sin regla' están medidos peor.",
+        "· En PvP los asientos de una misma partida no son independientes: gana uno solo.",
+        f"  Con {index.observations} asientos el efecto es pequeño frente al ancho de los",
+        "  intervalos, pero los IC de arriba son algo optimistas.",
+        "· El control por tamaño de mazo es en parte un mediador, no sólo un confusor: si",
+        "  un combo te mantiene vivo y por eso compras más, controlarlo se come parte del",
+        "  efecto. La pregunta que responde el ranking es la del constructor de mazos —'a",
+        "  igualdad de huecos, ¿aporta más B a quien ya tiene A?'—, que es la útil, pero no",
+        "  es la misma que '¿cuánto sube mi tasa de victoria si añado el combo?'.",
         "",
     ]
+
+
+def explain_section(index: Index, a: str, b: str, min_cell: int) -> str:
+    """Desglose de un par, estrato a estrato."""
+    breakdown = mining.explain_pair(index, a, b, min_cell=min_cell)
+    used = [s for s in breakdown if s.used]
+    estimate = stats.estimate_from_strata(
+        [(s.both, s.only_a, s.only_b, s.neither) for s in breakdown], min_cell=min_cell)
+    lines = [
+        RULE,
+        f"DESGLOSE DE {a} + {b}",
+        RULE,
+        f"Lift agregado {_fmt_lift(estimate.lift)} {_fmt_ci(estimate)} "
+        f"sobre {estimate.strata_used} estratos, soporte {estimate.support}.",
+        "",
+        f"{'estrato':<44}{'ambas':>10}{'sólo A':>10}{'sólo B':>10}"
+        f"{'ninguna':>10}{'ψ':>7}{'peso':>7}",
+    ]
+    for row in breakdown[:40]:
+        clave = f"{row.key[0]} · {row.key[1]}p · {row.key[2]} · tramo {row.key[3]}"
+        marca = " " if row.used else "×"
+        lines.append(
+            f"{marca}{clave:<43}"
+            f"{row.both.wins:>4}/{row.both.n:<5}"
+            f"{row.only_a.wins:>4}/{row.only_a.n:<5}"
+            f"{row.only_b.wins:>4}/{row.only_b.n:<5}"
+            f"{row.neither.wins:>4}/{row.neither.n:<5}"
+            f"{row.log_lift:>7.2f}{row.weight:>7.1f}")
+    if len(breakdown) > 40:
+        lines.append(f"  … y {len(breakdown) - 40} estratos más")
+    lines += ["", "× = estrato descartado por no tener las cuatro celdas pobladas "
+              f"(min_cell={min_cell}).",
+              f"Entran {len(used)} de {len(breakdown)} estratos con presencia del par.", ""]
+    return "\n".join(lines)
 
 
 def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
