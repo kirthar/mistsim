@@ -552,7 +552,21 @@ class Valuer:
     # -- estado completo ----------------------------------------------------
 
     def value(self, state: GameState) -> float:
-        """Lo que vale el turno si se cerrara aquí, con sus fases de cierre incluidas."""
+        """Lo que vale el turno si se cerrara aquí.
+
+        Dos decisiones que no son obvias:
+
+        La moneda se valora por lo que COMPRA (`coin_value` consulta la tabla del
+        Mercado), no por su cuenta: cinco monedas no valen nada si la carta más barata
+        de la fila cuesta seis. Lo mismo los puntos de Misión, que valen lo que consigan
+        en las pistas.
+
+        Y no hay ningún término por robar. Lo hubo —`0.2 * len(deck)`— y estaba al
+        revés: robar VACÍA el mazo, así que ese término premiaba no robar, y con
+        `motor-robo` (peso de robo 3,3) llegaba a penalizar cada carta robada. El valor
+        de robar es lo que las cartas nuevas permiten hacer, y eso ya lo cuenta el resto
+        de la función cuando se juegan.
+        """
         player = state.player(self.player_id)
         if state.finished and state.winner == self.player_id:
             return 1e6
@@ -562,7 +576,6 @@ class Valuer:
         total += obj.weight("coin", EPSILON) * self.coin_value(state, player.resources.coin)
         total += obj.weight("atium", EPSILON) * player.atium
         total += obj.weight("heal", EPSILON) * player.health * 0.1
-        total += obj.weight("draw", EPSILON) * 0.2 * len(player.deck)
         # Los Aliados se quedan en mesa y producen todos los turnos siguientes.
         total += 1.5 * len(player.allies)
         return total
