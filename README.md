@@ -13,6 +13,8 @@ mistsim batch -n 200 -p 3             # 200 partidas, resumen de resultados
 mistsim tourney -n 20                 # liguilla de todos los arquetipos
 mistsim cards Dominate                # ficha de una carta y sus sinergias
 mistsim cards --metal Zinc --tag ally
+
+mistsim batch -n 5000 -w 8 --save corpus.jsonl   # lote paralelo, guardado como corpus
 ```
 
 ## Estado de los datos
@@ -57,9 +59,15 @@ src/mistsim/
   domain/    estado puro: cartas, metales, jugador, mercado, misiones
   engine/    reglas: efectos, turno, combate, Lord Ruler
   agents/    estrategia: etiquetas, sinergias, perfiles, arquetipos
-  cli/       play · batch · tourney · validate · cards
+  io/        serialización y corpus JSONL
+  sim/       lotes de partidas en paralelo
+  cli/       punto de entrada + un fichero por subcomando
   report/    log legible turno a turno
 ```
+
+Para trabajar en paralelo sobre el repo, ver [CONTRIBUTING.md](CONTRIBUTING.md): describe
+los contratos congelados (`PlayerResult`, `serial`, `run_batch`, `GameState.clone`), cómo
+añadir un subcomando sin tocar `main.py`, y el reparto de ficheros entre líneas de trabajo.
 
 ### El turno es un espacio de acciones, no un guion
 

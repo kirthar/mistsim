@@ -77,11 +77,13 @@ class Agent(Chooser):
 
 class GameEngine:
     def __init__(self, content: Content | None = None, config: GameConfig | None = None,
-                 seed: int | None = None) -> None:
+                 seed: int | None = None, log: EventLog | None = None) -> None:
         self.content = content or load_content()
         self.config = config or GameConfig()
         self.rng = random.Random(seed)
-        self.log = EventLog()
+        #: Pasar un EventLog con `keep` filtrado permite correr lotes grandes sin
+        #: construir el log completo. Ver EventLog.STATS_KINDS.
+        self.log = log if log is not None else EventLog()
 
     def run(self, agents: list[Agent], characters: list[str] | None = None) -> GameResult:
         if characters is None:

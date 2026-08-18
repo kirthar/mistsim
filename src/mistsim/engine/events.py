@@ -23,15 +23,29 @@ class Event:
         return f"[T{self.turn:02d} {who}] {self.kind} {bits}".rstrip()
 
 
+#: Eventos de los que `GameResult` deriva los datos por jugador. Un lote silencioso
+#: conserva sólo éstos: bastan para el análisis y dejan fuera el 90% del volumen.
+STATS_KINDS = frozenset({"buy", "damage", "mission-advance", "soothe", "eliminate-top"})
+
+
 class EventLog:
-    def __init__(self) -> None:
+    """Registro de eventos de una partida.
+
+    `keep` filtra qué se almacena. Con `keep=None` se guarda todo, que es lo que quieren
+    el log legible y el visor web. Un lote de decenas de miles de partidas pasa
+    `keep=STATS_KINDS` y se ahorra la mayor parte del coste sin perder las métricas por
+    jugador, que se derivan justo de esos eventos.
+    """
+
+    def __init__(self, keep: frozenset[str] | None = None) -> None:
         self.events: list[Event] = []
         self.turn = 0
+        self.keep = keep
 
-    def emit(self, kind: str, player: int | None = None, **data: Any) -> Event:
-        event = Event(kind=kind, turn=self.turn, player=player, data=data)
-        self.events.append(event)
-        return event
+    def emit(self, kind: str, player: int | None = None, **data: Any) -> None:
+        if self.keep is not None and kind not in self.keep:
+            return
+        self.events.append(Event(kind=kind, turn=self.turn, player=player, data=data))
 
     def of_kind(self, kind: str) -> list[Event]:
         return [e for e in self.events if e.kind == kind]

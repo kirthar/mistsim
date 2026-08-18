@@ -245,3 +245,127 @@ def test_corpus_appends_without_rewriting(content, tmp_path):
 def _agent(name):
     from mistsim.agents.utility import make
     return make(name, 1)
+
+
+# --- A3: runner de lotes -----------------------------------------------------
+
+
+def _spec(**kwargs):
+    from mistsim.sim.batch import BatchSpec
+    base = {
+        "strategies": ("aggro-combate", "rush-mision"),
+        "config": GameConfig(num_players=2, max_turns=20),
+        "base_seed": 500,
+    }
+    base.update(kwargs)
+    return BatchSpec(**base)
+
+
+def test_batch_is_deterministic_regardless_of_worker_count():
+    """El contrato que hace reproducible todo el análisis posterior.
+
+    Las semillas se derivan del índice de partida, no de un RNG compartido, y el pool
+    devuelve en orden. Si esto se rompe, dos ejecuciones del mismo lote dan números
+    distintos y ningún resultado del optimizador es comparable con el anterior.
+    """
+    from mistsim.sim.batch import run_batch
+
+    spec = _spec()
+    serial_run = [(r.reason, r.turns, r.winner)
+                  for r in run_batch(spec, 12, workers=1, collect_log=False)]
+    parallel = [(r.reason, r.turns, r.winner)
+                for r in run_batch(spec, 12, workers=4, collect_log=False)]
+    assert serial_run == parallel
+
+
+def test_batch_reruns_identically(content):
+    from mistsim.sim.batch import run_batch
+
+    spec = _spec()
+    first = [r.turns for r in run_batch(spec, 8, workers=1, collect_log=False)]
+    second = [r.turns for r in run_batch(spec, 8, workers=1, collect_log=False)]
+    assert first == second
+
+
+def test_different_base_seeds_give_different_games():
+    from mistsim.sim.batch import run_batch
+
+    a = [r.turns for r in run_batch(_spec(base_seed=1), 10, workers=1, collect_log=False)]
+    b = [r.turns for r in run_batch(_spec(base_seed=999), 10, workers=1, collect_log=False)]
+    assert a != b
+
+
+def test_player_metrics_survive_a_quiet_batch():
+    """`collect_log=False` filtra el log pero debe conservar las métricas por jugador."""
+    from mistsim.sim.batch import run_batch
+
+    spec = _spec()
+    loud = list(run_batch(spec, 4, workers=1, collect_log=True))
+    quiet = list(run_batch(spec, 4, workers=1, collect_log=False))
+
+    for a, b in zip(loud, quiet, strict=True):
+        assert [p.purchases for p in a.players] == [p.purchases for p in b.players]
+        assert [p.damage_dealt for p in a.players] == [p.damage_dealt for p in b.players]
+        assert [p.mission_points_spent for p in a.players] == [
+            p.mission_points_spent for p in b.players]
+    assert len(quiet[0].log) < len(loud[0].log), "el log filtrado debe ser más pequeño"
+
+
+def test_batch_accepts_custom_profiles_not_in_the_registry():
+    """El optimizador evalúa candidatos que aún no son arquetipos registrados."""
+    from mistsim.sim.batch import run_batch
+
+    tuned = archetypes.get("aggro-combate").clone(name="candidato", cost_bias=0.9)
+    spec = _spec(strategies=("candidato", "rush-mision"),
+                 custom_profiles=(("candidato", tuned),))
+    results = list(run_batch(spec, 4, workers=1, collect_log=False))
+    assert len(results) == 4
+    assert all(r.players[0].strategy == "candidato" for r in results)
+
+
+def test_empty_batch_yields_nothing():
+    from mistsim.sim.batch import run_batch
+
+    assert list(run_batch(_spec(), 0)) == []
+
+
+def test_batch_output_feeds_the_corpus_writer(tmp_path):
+    """El encadenado que usará la minería de combos: lote -> JSONL, sin memoria de por medio."""
+    from mistsim.sim.batch import run_batch
+
+    path = tmp_path / "corpus.jsonl"
+    written = serial.write_corpus(
+        path, run_batch(_spec(), 10, workers=1, collect_log=False))
+    assert written == 10
+    assert sum(1 for _ in serial.read_corpus_dicts(path)) == 10
+
+
+# --- A5: CLI extensible ------------------------------------------------------
+
+
+def test_every_command_module_registers_itself():
+    """Un comando nuevo se añade creando un fichero, sin tocar main.py."""
+    from mistsim.cli import commands
+
+    names = {m.__name__.rsplit(".", 1)[-1] for m in commands.discover()}
+    assert {"play", "batch", "tourney", "validate", "cards"} <= names
+
+
+def test_parser_exposes_all_discovered_commands():
+    from mistsim.cli import commands
+    from mistsim.cli.main import build_parser
+
+    parser = build_parser()
+    action = next(a for a in parser._actions if a.dest == "command")
+    discovered = {m.__name__.rsplit(".", 1)[-1] for m in commands.discover()}
+    assert discovered <= set(action.choices)
+
+
+def test_cli_runs_end_to_end(capsys):
+    from mistsim.cli.main import main
+
+    assert main(["validate"]) == 0
+    assert "Contenido válido" in capsys.readouterr().out
+
+    assert main(["cards", "Rebel"]) == 0
+    assert "riot" in capsys.readouterr().out
