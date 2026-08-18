@@ -1,27 +1,99 @@
 {
-  "note": "El juego incluye 8 cartas de Misión, de las cuales se usan 3 al azar por partida. Solo se transcribió el ejemplo completo mostrado en el manual (Pits of Hathsin). Las otras 7 se conocen solo por nombre y por descripciones generales de la guía comunitaria de Zen -- NO se tienen los valores numéricos exactos de sus recompensas verificados de una imagen real. Antes de usar estos datos en el simulador, hay que fotografiar las 8 cartas de Misión físicas para completar esto con precisión.",
-  "mechanics": {
-    "track_length": 12,
-    "structure": ["starting area (off track)", "track with mid-rewards", "first-player-only bonus at each reward", "top reward", "first-to-finish bonus top reward"]
+  "_meta": {
+    "verified": false,
+    "source": "homebrew salvo Pits of Hathsin (parcial)",
+    "note": "HUECO DE DATOS. El juego trae 8 cartas de Misión y usa 3 al azar por partida. Sólo se conocen el nombre de las 8 y la anatomía completa de Pits of Hathsin (ejemplo del manual, p.14). Los valores numéricos de las otras 7 NO están publicados en ninguna fuente. Se han reconstruido a partir de las descripciones de la guía comunitaria de Zen, respetando su valoración relativa (S/A/B/C/D-tier), y calibrados sobre la única pista verificada.",
+    "structure": "Pista de 12 puntos. Recompensas intermedias de un solo uso, con un bonus extra para el primero que llega a cada una. Recompensa superior al coronar, más un bonus extra de un solo uso para el primero en coronarla.",
+    "action_item": "Fotografiar las 8 cartas de Misión para sustituir esto por datos reales."
   },
-  "fully_verified_example": {
-    "name": "Pits of Hathsin",
-    "source": "rulebook page 14, shown as full anatomy example",
-    "starting_bonus": "one-time: +1 Atium",
-    "mid_track_reward_1": {"position": "low on track", "reward": "1 coin", "first_player_bonus": "additional 1 coin"},
-    "mid_track_reward_2": {"position": "mid track", "reward": "2 combat", "first_player_bonus": "additional 2 heal"},
-    "top_reward": "one-time, appears to grant Atium (per community guide: 2 Atium total on completion)",
-    "top_reward_first_player_bonus": "always one-time even if top reward is permanent",
-    "community_assessment": "[Zen] ranks this Mission as D-tier (lowest) for Solo/Co-op because the tier-3 payoff arrives too late (~turn 14) to matter in most games."
-  },
-  "named_only_not_verified": [
-    {"name": "Canton Of Orthodoxy", "community_tier_note": "[Zen] S-tier - can eliminate up to 9 cards for first finisher via repeated Soothe-style rewards"},
-    {"name": "Keep Venture", "community_tier_note": "[Zen] S-tier - 11 gold across 5 checkpoints, permanent +2 gold/turn on completion"},
-    {"name": "Luthadel Garrison", "community_tier_note": "[Zen] A-tier - modest damage, first-player rewards destroy Adversary shields"},
-    {"name": "Kredik Shaw", "community_tier_note": "[Zen] A-tier - grants extra card draws at 3 points, permanent +1 draw/turn on completion"},
-    {"name": "Luthadel Rooftops", "community_tier_note": "[Zen] B-tier - accelerates reaching 3-metal-burns-per-turn"},
-    {"name": "Skaa Caverns", "community_tier_note": "[Zen] B-tier - refreshes 2 metals, better at higher difficulty"},
-    {"name": "Crew Hideout", "community_tier_note": "[Zen] C-tier - up to 14 total healing across the track, nothing else"}
-  ],
-  "action_item": "Fotografiar las 8 cartas de Misión físicas (frente completo, valores numéricos legibles) para completar este archivo con datos verificados antes de implementar el sistema de Misiones en el simulador."
+  "missions": [
+    {
+      "name": "Pits of Hathsin",
+      "verified": false,
+      "source": "manual p.14 (estructura verificada, valores parciales)",
+      "community_tier": "D",
+      "starting_bonus": {"atium": 1},
+      "rewards": [
+        {"position": 4, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}},
+        {"position": 8, "effects": {"combat": 2}, "first_player_bonus": {"heal": 2}}
+      ],
+      "top_reward": {"atium": 1},
+      "top_reward_first_bonus": {"atium": 1}
+    },
+    {
+      "name": "Canton Of Orthodoxy",
+      "verified": false, "source": "homebrew", "community_tier": "S",
+      "rewards": [
+        {"position": 3, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}},
+        {"position": 6, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}},
+        {"position": 9, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}}
+      ],
+      "top_reward": {"soothe": 2},
+      "top_reward_first_bonus": {"soothe": 3}
+    },
+    {
+      "name": "Keep Venture",
+      "verified": false, "source": "homebrew", "community_tier": "S",
+      "rewards": [
+        {"position": 2, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
+        {"position": 4, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
+        {"position": 6, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
+        {"position": 8, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
+        {"position": 10, "effects": {"coin": 3}, "first_player_bonus": {"coin": 1}}
+      ],
+      "top_reward": {"permanent_coin_per_turn": 2},
+      "top_reward_first_bonus": {"coin": 4}
+    },
+    {
+      "name": "Luthadel Garrison",
+      "verified": false, "source": "homebrew", "community_tier": "A",
+      "rewards": [
+        {"position": 4, "effects": {"combat": 2}, "first_player_bonus": {"destroy_adversary_shield": 1}},
+        {"position": 8, "effects": {"combat": 3}, "first_player_bonus": {"destroy_adversary_shield": 1}}
+      ],
+      "top_reward": {"combat": 4},
+      "top_reward_first_bonus": {"destroy_adversary_shield": 2}
+    },
+    {
+      "name": "Kredik Shaw",
+      "verified": false, "source": "homebrew", "community_tier": "A",
+      "rewards": [
+        {"position": 3, "effects": {"draw": 1}, "first_player_bonus": {"draw": 1}},
+        {"position": 7, "effects": {"draw": 2}, "first_player_bonus": {"draw": 1}}
+      ],
+      "top_reward": {"permanent_draw_per_turn": 1},
+      "top_reward_first_bonus": {"draw": 3}
+    },
+    {
+      "name": "Luthadel Rooftops",
+      "verified": false, "source": "homebrew", "community_tier": "B",
+      "rewards": [
+        {"position": 4, "effects": {"train": 1}, "first_player_bonus": {"train": 1}},
+        {"position": 8, "effects": {"train": 1}, "first_player_bonus": {"train": 1}}
+      ],
+      "top_reward": {"train": 2},
+      "top_reward_first_bonus": {"train": 1}
+    },
+    {
+      "name": "Skaa Caverns",
+      "verified": false, "source": "homebrew", "community_tier": "B",
+      "rewards": [
+        {"position": 4, "effects": {"refresh_metal": 1}, "first_player_bonus": {"refresh_metal": 1}},
+        {"position": 8, "effects": {"refresh_metal": 2}, "first_player_bonus": {"heal": 3}}
+      ],
+      "top_reward": {"permanent_refresh_per_turn": 2},
+      "top_reward_first_bonus": {"atium": 1}
+    },
+    {
+      "name": "Crew Hideout",
+      "verified": false, "source": "homebrew", "community_tier": "C",
+      "rewards": [
+        {"position": 3, "effects": {"heal": 3}, "first_player_bonus": {"heal": 2}},
+        {"position": 6, "effects": {"heal": 4}, "first_player_bonus": {"heal": 2}},
+        {"position": 9, "effects": {"heal": 4}, "first_player_bonus": {"heal": 2}}
+      ],
+      "top_reward": {"heal": 5},
+      "top_reward_first_bonus": {"heal": 4}
+    }
+  ]
 }

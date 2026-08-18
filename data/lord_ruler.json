@@ -1,0 +1,443 @@
+{
+  "_meta": {
+    "verified": false,
+    "source": "homebrew",
+    "note": "HUECO DE DATOS. Ninguna de las 36 cartas reales del mazo del Lord Ruler está transcrita ni publicada en ninguna fuente. Estas 36 respetan la estructura documentada en el manual y el FAQ (escudos 1-3, X = Dominance actual, Edictos con hasta 4 efectos secuenciales), pero sus nombres y valores son inventados. Un resultado de modo Coop NO es un resultado del juego real.",
+    "action_item": "Fotografiar las 36 cartas del Lord Ruler.",
+    "generated_by": "scripts/gen_lord_ruler.py"
+  },
+  "lord_ruler": {
+    "starting_health": 48,
+    "dominance_start": 1,
+    "dominance_max": 6,
+    "heal_per_incomplete_mission": 10,
+    "market_cards_cleared": 2
+  },
+  "cards": [
+    {
+      "id": "adv_00",
+      "name": "Steel Inquisitor",
+      "type": "Adversary",
+      "shields": [
+        "X"
+      ],
+      "effect": {
+        "damage": 3
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_01",
+      "name": "Koloss Brute",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        "X"
+      ],
+      "effect": {
+        "damage": 4
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_02",
+      "name": "Hazekiller Squad",
+      "type": "Adversary",
+      "shields": [
+        3
+      ],
+      "effect": {
+        "block_ally_activation": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_03",
+      "name": "Obligator Inspector",
+      "type": "Adversary",
+      "shields": [
+        2
+      ],
+      "effect": {
+        "coin_penalty": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_04",
+      "name": "Canton Enforcer",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        3
+      ],
+      "effect": {
+        "mission_penalty": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_05",
+      "name": "Mistwraith",
+      "type": "Adversary",
+      "shields": [
+        2,
+        2
+      ],
+      "effect": {
+        "damage": 2
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_06",
+      "name": "Garrison Captain",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        "X",
+        2
+      ],
+      "effect": {
+        "damage": 5
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_07",
+      "name": "Thug Enforcer",
+      "type": "Adversary",
+      "shields": [
+        3,
+        3
+      ],
+      "effect": {
+        "burn_limit_penalty": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_08",
+      "name": "Seeker Adjunct",
+      "type": "Adversary",
+      "shields": [
+        2
+      ],
+      "effect": {
+        "block_seek": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_09",
+      "name": "Lurcher Sentinel",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        2
+      ],
+      "effect": {
+        "block_pull": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_10",
+      "name": "Soother Agent",
+      "type": "Adversary",
+      "shields": [
+        3
+      ],
+      "effect": {
+        "discard_penalty": 1
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_11",
+      "name": "Koloss Warband",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        "X",
+        "X"
+      ],
+      "effect": {
+        "damage": 6
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_12",
+      "name": "Inquisitor Prime",
+      "type": "Adversary",
+      "shields": [
+        4,
+        4
+      ],
+      "effect": {
+        "damage": 5
+      },
+      "timing": "end_of_turn"
+    },
+    {
+      "id": "adv_13",
+      "name": "Ministry Overseer",
+      "type": "Adversary",
+      "shields": [
+        "X",
+        3,
+        3
+      ],
+      "effect": {
+        "mission_penalty": 2
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_14",
+      "name": "Kandra Impostor",
+      "type": "Adversary",
+      "shields": [
+        2,
+        2
+      ],
+      "effect": {
+        "block_market_buy_above": 5
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "adv_15",
+      "name": "Tineye Watcher",
+      "type": "Adversary",
+      "shields": [
+        3
+      ],
+      "effect": {
+        "block_sense": 1
+      },
+      "timing": "permanent"
+    },
+    {
+      "id": "edict_00",
+      "name": "Decree of Ash",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "damage": 2
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_01",
+      "name": "Skaa Purge",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "collective_damage": 3
+      },
+      "heals_lord_ruler": false,
+      "clears_market": true
+    },
+    {
+      "id": "edict_02",
+      "name": "Iron Ministry Edict",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "eliminate_from_hand": 1
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_03",
+      "name": "Mists of Judgment",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "collective_damage": 4
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_04",
+      "name": "Tribute Levy",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "coin_penalty": 2
+      },
+      "heals_lord_ruler": false,
+      "clears_market": true
+    },
+    {
+      "id": "edict_05",
+      "name": "Ashfall",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "damage": 3
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_06",
+      "name": "Inquisition",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "eliminate_from_hand": 2
+      },
+      "heals_lord_ruler": true,
+      "clears_market": true
+    },
+    {
+      "id": "edict_07",
+      "name": "Martial Law",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "block_market_buy_above": 6
+      },
+      "heals_lord_ruler": false,
+      "clears_market": true
+    },
+    {
+      "id": "edict_08",
+      "name": "Steel Ministry Purge",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "collective_damage": 5
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_09",
+      "name": "Lord Ruler's Gaze",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "mission_penalty": 2
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_10",
+      "name": "Curfew",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "draw_penalty": 1
+      },
+      "heals_lord_ruler": false,
+      "clears_market": true
+    },
+    {
+      "id": "edict_11",
+      "name": "Ascendant Warning",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "collective_damage": 4
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_12",
+      "name": "Final Empire Decree",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "damage": 5
+      },
+      "heals_lord_ruler": true,
+      "clears_market": true
+    },
+    {
+      "id": "edict_13",
+      "name": "Terris Betrayal",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "eliminate_from_hand": 1
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_14",
+      "name": "Koloss Muster",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "collective_damage": 6
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_15",
+      "name": "Hemalurgic Spike",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "burn_limit_penalty": 1
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_16",
+      "name": "Well of Ascension",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "collective_damage": 5
+      },
+      "heals_lord_ruler": true,
+      "clears_market": true
+    },
+    {
+      "id": "edict_17",
+      "name": "The Deepness Stirs",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "damage": 6
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    },
+    {
+      "id": "edict_18",
+      "name": "Reign Eternal",
+      "type": "Edict",
+      "dominance_increase": 2,
+      "effect": {
+        "collective_damage": 7
+      },
+      "heals_lord_ruler": true,
+      "clears_market": true
+    },
+    {
+      "id": "edict_19",
+      "name": "Sazed's Doubt",
+      "type": "Edict",
+      "dominance_increase": 1,
+      "effect": {
+        "draw_penalty": 1
+      },
+      "heals_lord_ruler": true,
+      "clears_market": false
+    }
+  ]
+}

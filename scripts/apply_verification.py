@@ -99,7 +99,8 @@ def set_path(card, path, value):
 
 
 def main() -> None:
-    data = json.load(open(SRC))
+    with open(SRC, encoding="utf-8") as fh:
+        data = json.load(fh)
     cards = data["cards"]
 
     # El número va antes que los arreglos, porque uno de ellos renombra una carta.
@@ -123,8 +124,10 @@ def main() -> None:
         "de carta distintos sobre 82, con 17 huecos = las 17 cartas de 2 copias."
     )
 
-    json.dump(data, open(SRC, "w"), indent=2, ensure_ascii=False)
-    json.dump(diffs, open("data/verify/diffs.json", "w"), indent=2, ensure_ascii=False)
+    with open(SRC, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2, ensure_ascii=False)
+    with open("data/verify/diffs.json", "w", encoding="utf-8") as fh:
+        json.dump(diffs, fh, indent=2, ensure_ascii=False)
     print(f"{len(diffs)} correcciones sobre {len(FIXES)} cartas")
 
 

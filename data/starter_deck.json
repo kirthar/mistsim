@@ -1,0 +1,37 @@
+{
+  "_meta": {
+    "verified": true,
+    "source": "Facilitado por el propietario del juego a partir de las cartas físicas (2026-08).",
+    "note": "Mazo inicial de 10 cartas: 4 de Entrenamiento + 6 de Financiación. Existen 8 diseños de Entrenamiento, uno por metal; cada personaje recibe 4 de ellos. Vin y Marsh comparten conjunto, igual que Kelsier y Shan.",
+    "metal_pair_note": "Cada carta de Entrenamiento puede jugarse de lado como su metal o como el metal de su pareja, igual que las de Mercado. Por eso un conjunto de 4 cubre los 8 metales."
+  },
+  "funding": {
+    "name": "Funding", "type": "Funding", "cost": 0, "copies": 6,
+    "metal_pair": [], "primary": {"metal": null, "effects": {"coin": 1}}
+  },
+  "training": [
+    {"name": "Training (Pewter)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Pewter", "Tin"], "primary": {"metal": "Pewter", "effects": {"combat": 2, "coin": 1}}},
+    {"name": "Training (Tin)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Tin", "Pewter"], "primary": {"metal": "Tin", "effects": {"mission": 2}}},
+    {"name": "Training (Bronze)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Bronze", "Copper"], "primary": {"metal": "Bronze", "effects": {"mission": 2}}},
+    {"name": "Training (Copper)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Copper", "Bronze"], "primary": {"metal": "Copper", "effects": {"combat": 2, "coin": 1}}},
+    {"name": "Training (Zinc)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Zinc", "Brass"], "primary": {"metal": "Zinc", "effects": {"mission": 1, "coin": 1}}},
+    {"name": "Training (Brass)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Brass", "Zinc"], "primary": {"metal": "Brass", "effects": {"mission": 1, "coin": 1}}},
+    {"name": "Training (Iron)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Iron", "Steel"], "primary": {"metal": "Iron", "effects": {"combat": 2, "coin": 1}}},
+    {"name": "Training (Steel)", "type": "Training", "cost": 0, "copies": 1,
+     "metal_pair": ["Steel", "Iron"], "primary": {"metal": "Steel", "effects": {"combat": 2, "coin": 1}}}
+  ],
+  "character_training_sets": {
+    "vin": ["Pewter", "Iron", "Bronze", "Brass"],
+    "marsh": ["Pewter", "Iron", "Bronze", "Brass"],
+    "vin_brass": ["Pewter", "Iron", "Bronze", "Brass"],
+    "kelsier": ["Tin", "Copper", "Zinc", "Steel"],
+    "shan": ["Tin", "Copper", "Zinc", "Steel"]
+  }
+}
