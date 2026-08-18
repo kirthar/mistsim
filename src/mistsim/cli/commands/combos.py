@@ -41,8 +41,9 @@ def cmd_combos(args: argparse.Namespace) -> int:
               file=sys.stderr)
 
     content_costs = corpus_mod.card_costs()
-    # Se materializan: la réplica en mitades necesita recorrerlas más de una vez, y
-    # 15 000 observaciones son 3 MB, no un problema.
+    # Se materializan: el autoajuste de tramos y la réplica en mitades las recorren
+    # varias veces. Un asiento son unos 200 bytes, así que 180 000 caben de sobra; el
+    # que no cabe en memoria es el corpus JSONL, y ése sigue leyéndose en streaming.
     observations = list(corpus_mod.read_observations(path))
 
     # Cuántos tramos de tamaño de mazo hacen falta depende del tamaño del corpus, así
