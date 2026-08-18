@@ -33,6 +33,10 @@ class Ability:
     effects: Effects
     extra_burns: int = 0
 
+    def __deepcopy__(self, memo: dict) -> Ability:
+        """Inmutable como la Card que la contiene: se comparte."""
+        return self
+
 
 @dataclass(frozen=True)
 class Card:
@@ -51,6 +55,16 @@ class Card:
     defense: int | None = None
     copies: int = 1
     card_number: int | None = None
+
+    def __deepcopy__(self, memo: dict) -> Card:
+        """Una definición de carta es dato inmutable del juego: se comparte, no se copia.
+
+        Sin esto, clonar el estado copiaba las 82 definiciones del Mercado con sus
+        Ability y sus diccionarios de efectos, unas 5 900 llamadas a deepcopy por clon.
+        El solver clona miles de veces por turno, así que la diferencia es el orden de
+        magnitud entre viable e inviable.
+        """
+        return self
 
     @property
     def is_ally(self) -> bool:

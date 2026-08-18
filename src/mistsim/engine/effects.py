@@ -31,6 +31,14 @@ class EffectContext:
     source: str = "?"
     #: Efectos pendientes que sólo pueden resolverse al final del turno.
     deferred: list[tuple[str, Any]] = field(default_factory=list)
+    #: Cartas ya usadas por un Seek en la cadena actual.
+    #:
+    #: Seek resuelve la primaria de una carta del Mercado, y esa carta puede tener a su
+    #: vez un Seek: con sólo 6 cartas en la fila, la cadena se muerde la cola y recursa
+    #: sin fin. Las reglas no contemplan ese bucle porque nadie lo jugaría, pero el
+    #: motor sí necesita cerrarlo: una carta no puede volver a ser objetivo dentro de
+    #: la misma cadena.
+    seek_chain: frozenset[str] = frozenset()
 
     @property
     def res(self):
@@ -194,10 +202,7 @@ def _seek(ctx: EffectContext, value: int) -> None:
     Nunca alcanza la secundaria, y no exige quemar el metal de la carta objetivo:
     basta el Bronce que activó el Seek (FAQ).
     """
-    candidates = [
-        inst for inst in ctx.state.market.row
-        if not inst.card.is_ally and inst.card.cost <= value and inst.card.primary
-    ]
+    candidates = _seek_targets(ctx, value)
     if not candidates:
         ctx.log.emit("seek-empty", ctx.player.id, limit=value, source=ctx.source)
         return
@@ -205,29 +210,41 @@ def _seek(ctx: EffectContext, value: int) -> None:
     if chosen is None:
         return
     ctx.log.emit("seek", ctx.player.id, card=chosen.name, limit=value, source=ctx.source)
-    inner = EffectContext(ctx.state, ctx.player, ctx.log, ctx.chooser,
-                          source=f"seek:{chosen.name}", deferred=ctx.deferred)
-    resolve(chosen.card.primary.effects, inner)
+    resolve(chosen.card.primary.effects, _seek_context(ctx, chosen))
+
+
+def _seek_targets(ctx: EffectContext, limit: int, exclude: frozenset[str] = frozenset()):
+    """Acciones del Mercado alcanzables por un Seek de este límite de coste.
+
+    Seek nunca llega a la habilidad secundaria de su objetivo, sólo a la primaria.
+    """
+    return [
+        inst for inst in ctx.state.market.row
+        if not inst.card.is_ally and inst.card.cost <= limit and inst.card.primary
+        and inst.name not in ctx.seek_chain and inst.name not in exclude
+    ]
+
+
+def _seek_context(ctx: EffectContext, target) -> EffectContext:
+    return EffectContext(
+        ctx.state, ctx.player, ctx.log, ctx.chooser,
+        source=f"seek:{target.name}", deferred=ctx.deferred,
+        seek_chain=ctx.seek_chain | {target.name},
+    )
 
 
 @effect("seek_two_different_cards")
 def _seek_two(ctx: EffectContext, value: int) -> None:
     seen: set[str] = set()
     for _ in range(2):
-        candidates = [
-            inst for inst in ctx.state.market.row
-            if not inst.card.is_ally and inst.card.cost <= value
-            and inst.card.primary and inst.name not in seen
-        ]
+        candidates = _seek_targets(ctx, value, exclude=frozenset(seen))
         if not candidates:
             break
         chosen = ctx.chooser.choose_card(candidates, f"seek<={value}")
         if chosen is None:
             break
         seen.add(chosen.name)
-        inner = EffectContext(ctx.state, ctx.player, ctx.log, ctx.chooser,
-                              source=f"seek:{chosen.name}", deferred=ctx.deferred)
-        resolve(chosen.card.primary.effects, inner)
+        resolve(chosen.card.primary.effects, _seek_context(ctx, chosen))
 
 
 @effect("riot")
@@ -248,10 +265,13 @@ def _riot(ctx: EffectContext, value: int) -> None:
         chosen = ctx.chooser.choose_card(candidates, "riot", optional=True)
         if chosen is None:
             break
+        # Marcar ANTES de resolver: si el Aliado activado tiene a su vez Riot, no
+        # puede volver a elegirse a sí mismo y la cadena queda acotada.
         chosen.activations_used.add("riot")
         ctx.log.emit("riot", player.id, ally=chosen.name, source=ctx.source)
         inner = EffectContext(ctx.state, player, ctx.log, ctx.chooser,
-                              source=f"riot:{chosen.name}", deferred=ctx.deferred)
+                              source=f"riot:{chosen.name}", deferred=ctx.deferred,
+                              seek_chain=ctx.seek_chain)
         resolve(chosen.card.primary.effects, inner)
 
 

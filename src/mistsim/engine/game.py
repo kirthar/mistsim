@@ -12,9 +12,35 @@ from mistsim.engine.actions import Action, ActionKind, legal_actions
 from mistsim.engine.choices import Chooser, GreedyChooser
 from mistsim.engine.events import EventLog
 
+#: Motivos de fin de partida que cuentan como victoria del equipo en Solo/Coop.
+TEAM_WIN_REASONS = frozenset({"lord-ruler-defeated", "confrontation"})
+
 #: Tope de acciones por turno. Un turno legal real nunca se acerca; existe para que un
 #: agente con un bucle patológico falle ruidosamente en vez de colgar la simulación.
 MAX_ACTIONS_PER_TURN = 400
+
+
+@dataclass
+class PlayerResult:
+    """Qué hizo cada jugador, derivado del log UNA sola vez al cerrar la partida.
+
+    Existe para que el análisis posterior (optimizador, minería de combos, informes) no
+    tenga que re-escanear el log cada uno a su manera y llegar a números distintos.
+    """
+
+    player_id: int
+    strategy: str
+    character: str
+    won: bool
+    rank: int
+    final_health: int
+    purchases: list[str] = field(default_factory=list)
+    damage_dealt: int = 0
+    damage_taken: int = 0
+    mission_points_spent: int = 0
+    tracks_topped: int = 0
+    cards_eliminated: int = 0
+    training: int = 0
 
 
 @dataclass
@@ -25,11 +51,15 @@ class GameResult:
     log: EventLog
     final_health: dict[int, int] = field(default_factory=dict)
     mission_positions: dict[str, dict[int, int]] = field(default_factory=dict)
+    players: list[PlayerResult] = field(default_factory=list)
 
     @property
     def players_won(self) -> bool:
         """En Coop se gana o se pierde en equipo."""
         return self.reason in ("lord-ruler-defeated", "confrontation")
+
+    def player(self, pid: int) -> PlayerResult:
+        return self.players[pid]
 
 
 class Agent(Chooser):
@@ -74,7 +104,7 @@ class GameEngine:
                     lord_ruler.resolve_challenge(state, player, self.log, agents[player.id])
             self._check_victory(state)
 
-        return self._result(state)
+        return self._result(state, agents)
 
     def _play_turn(self, state: GameState, player, agent: Agent) -> None:
         turn.start_turn(state, player, self.log)
@@ -122,7 +152,7 @@ class GameEngine:
             state.finished = True
             self.log.emit("victory", alive[0].id, reason="last-standing")
 
-    def _result(self, state: GameState) -> GameResult:
+    def _result(self, state: GameState, agents: list[Agent]) -> GameResult:
         reason = state.victory_reason
         if reason is None:
             # Se agotaron los turnos: gana quien más lejos haya llegado en las Misiones,
@@ -143,7 +173,52 @@ class GameEngine:
             mission_positions={
                 t.mission.name: dict(t.positions) for t in state.tracks
             },
+            players=self._player_results(state, agents),
         )
+
+    def _player_results(self, state: GameState, agents: list[Agent]) -> list[PlayerResult]:
+        """Un recorrido único del log para repartir las métricas entre jugadores."""
+        # En Coop se gana o se pierde en equipo, así que `won` no depende del asiento.
+        team_won = state.lord_ruler is not None and state.victory_reason in TEAM_WIN_REASONS
+
+        stats = {
+            p.id: PlayerResult(
+                player_id=p.id,
+                strategy=getattr(agents[p.id], "name", "?"),
+                character=p.character.id,
+                won=team_won or state.winner == p.id,
+                rank=0,
+                final_health=p.health,
+                tracks_topped=sum(1 for t in state.tracks if t.finisher == p.id),
+                training=p.training,
+            )
+            for p in state.players
+        }
+
+        for event in self.log:
+            data = event.data
+            if event.kind == "buy" and event.player is not None:
+                stats[event.player].purchases.append(data["card"])
+            elif event.kind == "damage":
+                if event.player in stats:
+                    stats[event.player].damage_taken += data.get("amount", 0)
+                dealer = data.get("by")
+                if dealer in stats:
+                    stats[dealer].damage_dealt += data.get("amount", 0)
+            elif event.kind == "mission-advance" and event.player is not None:
+                # Eavesdrop avanza sin gastar puntos, así que no siempre hay "spent".
+                stats[event.player].mission_points_spent += data.get("spent", 0)
+            elif event.kind in ("soothe", "eliminate-top") and event.player is not None:
+                stats[event.player].cards_eliminated += 1
+
+        # Puesto: el ganador primero; el resto por progreso de Misión y salud.
+        def sort_key(pr: PlayerResult):
+            progress = sum(t.position_of(pr.player_id) for t in state.tracks)
+            return (pr.player_id == state.winner, progress, pr.final_health)
+
+        for rank, pr in enumerate(sorted(stats.values(), key=sort_key, reverse=True), 1):
+            pr.rank = rank
+        return [stats[p.id] for p in state.players]
 
     def _pick_characters(self, count: int) -> list[str]:
         """Reparte personajes distintos, sin mezclar las dos variantes de Vin."""

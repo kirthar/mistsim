@@ -126,12 +126,17 @@ def legal_actions(state: GameState) -> list[Action]:
     return actions
 
 
-def _metal_active(state: GameState, metal: Metal) -> bool:
+def _metal_active(state: GameState, metal: Metal | None) -> bool:
     """¿Se ha quemado o jugado ese metal este turno?
 
     Cubre tanto la ficha quemada como una carta jugada de lado, porque ambas cuentan
     igual para disparar Aliados y la habilidad de personaje.
+
+    `metal is None` significa que la habilidad no exige metal alguno — es el caso de
+    las cartas de Financiación, que dan su moneda con sólo jugarlas.
     """
+    if metal is None:
+        return True
     return metal in state.player(state.active).metals_active_this_turn
 
 

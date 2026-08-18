@@ -21,6 +21,10 @@ class Character:
     level_1_effects: dict
     promo: bool = False
 
+    def __deepcopy__(self, memo: dict) -> Character:
+        """Dato de contenido inmutable: se comparte al clonar el estado, no se copia."""
+        return self
+
 
 @dataclass
 class TurnResources:

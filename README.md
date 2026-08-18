@@ -117,19 +117,21 @@ cartas, y el personaje es un modificador.
 Liguilla de 12 partidas por emparejamiento (`mistsim tourney -n 12 -s 100`):
 
 ```
-motor-riot         68.3%      adelgazar          46.7%
-rampa-economica    66.7%      aggro-combate      46.7%
-equilibrado        55.0%      rush-mision        43.3%
-motor-robo         51.7%      combo-atium        42.5%
-muro-defender      51.7%      tempo-seek         40.0%
-                              recursion-hierro   37.5%
+muro-defender      55.8%      equilibrado        51.7%
+aggro-combate      55.0%      motor-riot         49.2%
+recursion-hierro   55.0%      rampa-economica    49.2%
+adelgazar          51.7%      motor-robo         47.5%
+combo-atium        51.7%      tempo-seek         42.5%
+                              rush-mision        40.8%
 ```
 
-Reparto sano, sin estrategias dominantes ni muertas. **Aviso:** en batch a 3 jugadores
-el 88% de las partidas termina por completar las tres Misiones. Es consecuencia directa
-de que los valores de las Misiones son homebrew, así que ese número dice más de mi
-reconstrucción que del juego real. No se ha ajustado a ojo precisamente por eso: la
-calibración honesta llega cuando se fotografíen las 8 cartas.
+Reparto de 15 puntos, sin estrategias dominantes ni muertas.
+
+**Aviso:** en batch a 3 jugadores el 84% de las partidas termina por completar las tres
+Misiones. Es consecuencia directa de que los valores de las Misiones son homebrew, así
+que ese número dice más de esa reconstrucción que del juego real. No se ha ajustado a
+ojo precisamente por eso: la calibración honesta llega cuando se fotografíen las 8
+cartas.
 
 ## Tests
 

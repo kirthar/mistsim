@@ -19,6 +19,10 @@ class MissionReward:
     effects: Effects
     first_player_bonus: Effects | None = None
 
+    def __deepcopy__(self, memo: dict) -> MissionReward:
+        """Dato de contenido inmutable: se comparte al clonar el estado, no se copia."""
+        return self
+
 
 @dataclass(frozen=True)
 class Mission:
@@ -29,6 +33,10 @@ class Mission:
     top_reward_first_bonus: Effects | None = None
     verified: bool = False
     source: str = "homebrew"
+
+    def __deepcopy__(self, memo: dict) -> Mission:
+        """Dato de contenido inmutable: se comparte al clonar el estado, no se copia."""
+        return self
 
 
 @dataclass

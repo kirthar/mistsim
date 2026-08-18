@@ -25,6 +25,8 @@ from mistsim.engine.game import Agent
 #: activarse gastando otras cartas de lado como metal. Si jugar boca arriba tuviera
 #: prioridad, el agente vaciaría la mano antes de plantearse la alternativa y se
 #: quedaría sin combustible — que es justo el error que cometía.
+#: BURN va por encima de PLAY_CARD, pero sólo cuando de verdad desbloquea algo: una
+#: quema con rendimiento 0 se puntúa aparte, por debajo de jugar una carta.
 PHASE = {
     ActionKind.PLAY_CARD: 60,
     ActionKind.CARD_AS_METAL: 60,
@@ -74,7 +76,13 @@ class UtilityAgent(Agent):
             return base + self._playability(state, card)
 
         if action.kind is ActionKind.BURN:
-            return base + 3.0 * self._metal_payoff(state, action.metal)
+            # Quemar un metal que no desbloquea nada es tirar la quema del turno, y sólo
+            # hay 1-4. Por eso una quema sin rendimiento cae por debajo de jugar cartas:
+            # primero se pone la mesa, después se enciende.
+            payoff = self._metal_payoff(state, action.metal)
+            if payoff <= 0:
+                return 1.0
+            return base + 3.0 * payoff
 
         if action.kind is ActionKind.CARD_AS_METAL:
             # No consume quema y no tiene tope, así que es la vía principal para
