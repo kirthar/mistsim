@@ -21,6 +21,7 @@ from mistsim.domain.metals import BASE_METALS
 from mistsim.domain.player import MAX_HEALTH
 from mistsim.engine.events import Event
 from mistsim.engine.game import GameResult
+from mistsim.engine.setup import BASE_HEALTH, TURN_ORDER_HEALTH
 from mistsim.report.log import ATTRIBUTED_TO_ACTOR, NOISY, describe
 
 TOKEN_READY = "ready"
@@ -75,6 +76,14 @@ def _apply(event: Event, state: dict[int, dict[str, Any]], track_names: list[str
         for name in data.get("missions") or []:
             if name not in track_names:
                 track_names.append(name)
+        # La salud inicial no llega en ningun evento propio (el primer
+        # `turn-start` de cada jugador es lo primero que la trae), pero se
+        # conoce con certeza: es la formula real del motor, no una suposicion.
+        # En Coop nadie recibe el bonus por orden de turno.
+        coop = data.get("mode") == "coop"
+        for player_id, player_state in state.items():
+            bonus = 0 if coop else TURN_ORDER_HEALTH.get(player_id, 4)
+            player_state["health"] = BASE_HEALTH + bonus
         return
 
     player = state.get(event.player) if event.player is not None else None

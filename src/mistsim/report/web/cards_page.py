@@ -6,11 +6,17 @@ from typing import Any
 from mistsim.agents.synergy import explain
 from mistsim.agents.tags import tags_for
 from mistsim.content.loader import Content
-from mistsim.domain.cards import Ability, Card
+from mistsim.domain.cards import Ability, Card, CardType
 from mistsim.report.web import theme
+from mistsim.report.web.images import ImageRef
 from mistsim.report.web.jsonutil import embed_json
 
 PAGE_TITLE = "mistsim - explorador de cartas"
+
+#: Proporcion (ancho/alto) de respaldo cuando no se conoce el tamano real del PNG.
+#: Las cartas de Accion son verticales y las de Aliado apaisadas: usar una sola
+#: proporcion para todas es justo lo que recortaba a los Aliados por el lado derecho.
+_FALLBACK_ASPECT = {CardType.ACTION.value: (300, 422), CardType.ALLY.value: (300, 215)}
 
 
 def _ability_dict(ability: Ability | None) -> dict[str, Any] | None:
@@ -24,12 +30,14 @@ def _ability_dict(ability: Ability | None) -> dict[str, Any] | None:
 
 
 def _card_to_dict(card: Card, market: tuple[Card, ...],
-                  images: dict[str, str | None]) -> dict[str, Any]:
+                  images: dict[str, ImageRef | None]) -> dict[str, Any]:
     others = [c for c in market if c.name != card.name]
     synergies = [
         {"rule": name, "value": round(value, 2), "why": why}
         for name, value, why in explain(card, others)
     ]
+    ref = images.get(card.name)
+    fallback_w, fallback_h = _FALLBACK_ASPECT.get(card.type.value, (300, 422))
     return {
         "name": card.name,
         "type": card.type.value,
@@ -44,17 +52,22 @@ def _card_to_dict(card: Card, market: tuple[Card, ...],
         "savant": dict(card.savant) if card.savant else None,
         "off_turn": dict(card.off_turn) if card.off_turn else None,
         "ongoing": card.ongoing,
-        "image": images.get(card.name),
+        "image": ref.path if ref else None,
+        # Ancho/alto reales del PNG cuando se conocen; si no, una proporcion por
+        # tipo de carta -- nunca la misma proporcion vertical para todas.
+        "image_w": (ref.width if ref and ref.width else fallback_w),
+        "image_h": (ref.height if ref and ref.height else fallback_h),
         "synergies": synergies,
     }
 
 
-def build_cards_data(content: Content, images: dict[str, str | None]) -> list[dict[str, Any]]:
+def build_cards_data(content: Content,
+                     images: dict[str, ImageRef | None]) -> list[dict[str, Any]]:
     market = tuple(sorted(content.market, key=lambda c: (c.cost, c.name)))
     return [_card_to_dict(c, market, images) for c in market]
 
 
-def render_cards_page(content: Content, images: dict[str, str | None],
+def render_cards_page(content: Content, images: dict[str, ImageRef | None],
                       combos: list[dict[str, Any]] | None = None,
                       *, player_page_href: str = "partida.html") -> str:
     cards = build_cards_data(content, images)
@@ -62,7 +75,8 @@ def render_cards_page(content: Content, images: dict[str, str | None],
     combos_json = embed_json(combos or [])
     has_combos = bool(combos)
 
-    return f"""<title>{PAGE_TITLE}</title>
+    return f"""<meta charset="utf-8">
+<title>{PAGE_TITLE}</title>
 <meta name="description" content="Explorador de las 65 cartas de Mercado de Mistborn:
   The Deckbuilding Game, con filtros y desglose de sinergias.">
 <style>
@@ -154,9 +168,12 @@ _PAGE_CSS = """
 }
 .tile:hover, .tile:focus{border-color:var(--accent); outline:none}
 .tile[aria-selected="true"]{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent)}
-.tile img{width:100%; aspect-ratio:300/422; object-fit:cover; display:block; background:var(--bg)}
+/* La proporcion real (vertical para Accion, apaisada para Aliado) llega por
+   estilo en linea desde image_w/image_h; object-fit:contain para que ninguna
+   carta se recorte aunque el dato de proporcion sea el de respaldo. */
+.tile img{width:100%; object-fit:contain; display:block; background:var(--bg)}
 .tile .ph{
-  width:100%; aspect-ratio:300/422; display:flex; align-items:center; justify-content:center;
+  width:100%; display:flex; align-items:center; justify-content:center;
   text-align:center; font-size:.8rem; padding:.5rem; color:var(--ink-dim); background:var(--bg);
 }
 .tile .meta{padding:.4rem .5rem; font-size:.8rem}
@@ -240,9 +257,10 @@ function cardTile(card) {
   el.setAttribute("role", "listitem");
   el.tabIndex = 0;
   el.dataset.name = card.name;
+  const ratio = `${card.image_w}/${card.image_h}`;
   const img = card.image
-    ? `<img loading="lazy" alt="${card.name}" src="${card.image}">`
-    : `<div class="ph">${card.name}</div>`;
+    ? `<img loading="lazy" alt="${card.name}" src="${card.image}" style="aspect-ratio:${ratio}">`
+    : `<div class="ph" style="aspect-ratio:${ratio}">${card.name}</div>`;
   const metals = card.metals.join("/") || "-";
   el.innerHTML = `${img}<div class="meta"><b>${card.name}</b>${card.cost} pts &middot; `
     + `${metals}</div>`;

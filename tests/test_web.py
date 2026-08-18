@@ -112,6 +112,33 @@ def test_zero_turn_game_produces_a_timeline_without_crashing(zero_turn_game):
     assert timeline["blocks"][0]["owner"] is None
 
 
+def test_starting_health_is_known_from_the_arranque_block_not_a_dash(played_game):
+    """Antes del primer turn-start de cada jugador no llega ningun evento con la
+    salud, pero SI se conoce: es la formula real del motor (36 base + bonus por
+    orden de turno en PvP), no una suposicion. No debe quedar en None/"-"."""
+    from mistsim.engine.setup import BASE_HEALTH, TURN_ORDER_HEALTH
+
+    timeline = build_timeline(played_game)
+    arranque = timeline["blocks"][0]
+    assert arranque["owner"] is None and arranque["turn"] == 0
+
+    # `_play()` siempre monta partidas PvP (ver domain.state.GameConfig por defecto).
+    for player in played_game.players:
+        expected = BASE_HEALTH + TURN_ORDER_HEALTH.get(player.player_id, 4)
+        snap = arranque["snapshot"][player.player_id]
+        assert snap["health"] == expected
+
+
+def test_starting_health_is_known_even_with_zero_turns(zero_turn_game):
+    from mistsim.engine.setup import BASE_HEALTH
+
+    timeline = build_timeline(zero_turn_game)
+    arranque = timeline["blocks"][0]
+    for player_state in arranque["snapshot"].values():
+        assert player_state["health"] is not None
+        assert player_state["health"] >= BASE_HEALTH
+
+
 # --- página del reproductor ----------------------------------------------------
 
 
@@ -128,6 +155,19 @@ def test_player_page_renders_for_a_real_game_without_external_refs(played_game, 
     assert not EXTERNAL_URL.search(html)
     # el aviso de datos homebrew de Misiones/Lord Ruler debe aparecer (las Misiones lo son)
     assert "homebrew" in html.lower()
+
+
+def test_player_page_declares_utf8_charset_before_title(played_game, content):
+    """Sin esto un navegador que abre el HTML por file:// asume Latin-1 y cada
+    tilde/enye sale como mojibake -- la interfaz entera esta en espanol."""
+    html = render_player_page([played_game], content)
+    assert html.lower().startswith('<meta charset="utf-8">')
+    assert html.lower().index('<meta charset="utf-8">') < html.lower().index("<title>")
+
+
+def test_empty_player_page_also_declares_utf8_charset():
+    html = render_empty_player_page(reason="sin partidas")
+    assert html.lower().startswith('<meta charset="utf-8">')
 
 
 def test_player_page_embedded_summary_matches_the_game_result(played_game, content):
@@ -173,6 +213,36 @@ def test_cards_page_has_no_external_refs_and_is_valid(content):
     assert not EXTERNAL_URL.search(html)
 
 
+def test_cards_page_declares_utf8_charset_before_title(content):
+    images = {c.name: None for c in content.market}
+    html = render_cards_page(content, images)
+    assert html.lower().startswith('<meta charset="utf-8">')
+    assert html.lower().index('<meta charset="utf-8">') < html.lower().index("<title>")
+
+
+def test_ally_cards_get_their_own_real_landscape_aspect_ratio(tmp_path, content):
+    """Las 21 cartas de Aliado son apaisadas; si se les fuerza la proporcion vertical
+    de las de Accion, `object-fit` recorta el titulo y la caja de habilidades."""
+    from mistsim.domain.cards import CardType
+
+    images = copy_card_images([c.name for c in content.market], tmp_path)
+    data = build_cards_data(content, images)
+    by_name = {c["name"]: c for c in data}
+
+    for card in content.market:
+        embedded = by_name[card.name]
+        assert embedded["image_w"] and embedded["image_h"]
+        if card.type is CardType.ALLY:
+            assert embedded["image_w"] > embedded["image_h"], card.name
+        else:
+            assert embedded["image_h"] > embedded["image_w"], card.name
+
+    html = render_cards_page(content, images)
+    # regresion: si esto vuelve a "cover", las apaisadas se recortan de nuevo.
+    assert "object-fit:contain" in html
+    assert "object-fit:cover" not in html
+
+
 def test_cards_page_without_combos_shows_a_placeholder_not_a_crash(content):
     images = {c.name: None for c in content.market}
     html = render_cards_page(content, images, combos=None)
@@ -203,10 +273,30 @@ def test_copy_card_images_resolves_all_65_and_skips_missing(tmp_path, content):
     names = [c.name for c in content.market] + ["Carta Que No Existe"]
     mapping = copy_card_images(names, tmp_path)
     assert mapping["Carta Que No Existe"] is None
-    resolved = [p for p in mapping.values() if p is not None]
+    resolved = [ref for ref in mapping.values() if ref is not None]
     assert len(resolved) == 65
-    for rel in resolved:
-        assert (tmp_path / rel).exists()
+    for ref in resolved:
+        assert (tmp_path / ref.path).exists()
+
+
+def test_copy_card_images_reports_the_real_pixel_size_of_each_png(tmp_path, content):
+    """Las cartas de Aliado son apaisadas, las de Accion verticales -- si esto se
+    pierde, el explorador fuerza una sola proporcion y recorta la mitad del set."""
+    from mistsim.domain.cards import CardType
+
+    names = [c.name for c in content.market]
+    mapping = copy_card_images(names, tmp_path)
+    allies = [c for c in content.market if c.type is CardType.ALLY]
+    actions = [c for c in content.market if c.type is not CardType.ALLY]
+
+    for card in allies:
+        ref = mapping[card.name]
+        assert ref is not None and ref.width and ref.height
+        assert ref.width > ref.height, f"{card.name} deberia ser apaisada"
+    for card in actions:
+        ref = mapping[card.name]
+        assert ref is not None and ref.width and ref.height
+        assert ref.height > ref.width, f"{card.name} deberia ser vertical"
 
 
 # --- hueco de combos: tolerante a que el fichero no exista o esté mal formado ---
@@ -275,6 +365,21 @@ def test_build_report_writes_both_pages_and_copies_images(tmp_path):
     assert paths.player_page.read_text(encoding="utf-8")
     assert paths.cards_page.read_text(encoding="utf-8")
     assert any(paths.images_dir.glob("*.png"))
+
+
+def test_generated_files_declare_utf8_charset_within_the_browser_sniff_window(tmp_path):
+    """Un navegador que abre un HTML por file:// sólo mira los primeros 1024 bytes
+    buscando el charset; si `<meta charset>` no está ahí (o no está), asume Latin-1
+    y cada tilde sale como mojibake. Se comprueba a nivel de bytes, no de `str` en
+    memoria, que es justo donde se coló el bug la primera vez."""
+    corpus = tmp_path / "corpus.jsonl"
+    serial.write_corpus(corpus, [_play(seed=13)], include_log=True)
+    paths = build_report(corpus, tmp_path / "out")
+
+    for path in (paths.player_page, paths.cards_page):
+        head = path.read_bytes()[:1024]
+        assert b'<meta charset="utf-8">' in head.lower(), path
+        assert head.lower().index(b'<meta charset="utf-8">') < head.lower().index(b"<title>")
 
 
 def test_build_report_respects_max_games_and_flags_truncation(tmp_path):

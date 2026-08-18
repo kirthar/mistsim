@@ -30,7 +30,8 @@ def build_game_payload(result: GameResult, index: int) -> dict[str, Any]:
 
 def render_empty_player_page(*, reason: str, cards_page_href: str = "cartas.html") -> str:
     """Página válida cuando no hay ninguna partida que mostrar (corpus vacío o ausente)."""
-    return f"""<title>{PAGE_TITLE}</title>
+    return f"""<meta charset="utf-8">
+<title>{PAGE_TITLE}</title>
 <style>{theme.BASE_CSS}</style>
 <header class="page">
   <h1>Reproductor de partida</h1>
@@ -75,7 +76,8 @@ def render_player_page(results: list[GameResult], content: Content,
         if truncated else ""
     )
 
-    return f"""<title>{PAGE_TITLE}</title>
+    return f"""<meta charset="utf-8">
+<title>{PAGE_TITLE}</title>
 <meta name="description" content="Reproductor turno a turno de partidas de Mistborn:
   The Deckbuilding Game simuladas por mistsim.">
 <style>
