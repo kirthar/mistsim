@@ -41,6 +41,12 @@ def pair_rules(a: Card, b: Card) -> tuple[tuple[str, float], ...]:
 
 
 def rule_weight(a: Card, b: Card) -> float:
+    """Cuánta sinergia le atribuyen al par las reglas escritas a mano, sumada.
+
+    Es lo que el `UtilityAgent` le suma al valor de compra. Sirve para comprobar si hay
+    dosis-respuesta: los pares que las reglas puntúan alto deberían medir más que los
+    que puntúan bajo. Si no la hay, las reglas aciertan a lo sumo el signo.
+    """
     return sum(value for _, value in pair_rules(a, b))
 
 
@@ -172,4 +178,19 @@ def mechanical_groups(content: Content | None = None
         "dos cartas baratas (coste ≤ 3)": both(lambda c: c.cost <= 3),
         "alguna regla escrita a mano lo predice": predicted,
         "ninguna regla lo predice": not_predicted,
+        # Dosis-respuesta: si las reglas midieran bien la intensidad, este grupo debería
+        # separarse del anterior. Si no, aciertan el signo pero no la magnitud.
+        "las reglas lo puntúan alto (peso ≥ 2)": _weighted(by_name, 2.0),
+        "las reglas lo puntúan bajo (0 < peso < 2)": _weighted(by_name, 0.0, 2.0),
     }
+
+
+def _weighted(by_name: dict[str, Card], low: float,
+              high: float = float("inf")) -> Callable[[object], bool]:
+    def check(result) -> bool:
+        a, b = by_name.get(result.cards[0]), by_name.get(result.cards[1])
+        if a is None or b is None:
+            return False
+        weight = rule_weight(a, b)
+        return low <= weight < high if low else 0 < weight < high
+    return check
