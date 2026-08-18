@@ -22,6 +22,16 @@ Se calcula **dentro de cada estrato** (arquetipo × nº de jugadores × modo × 
 mazo) y se agregan los estratos por inverso de la varianza, que es un meta-análisis de
 efecto fijo de toda la vida. Un estrato al que le falte alguna de las cuatro celdas no
 aporta nada en vez de aportar un número inventado.
+
+La trampa del peso
+------------------
+El detalle que costó encontrar está en `_cell_variance`. Si la varianza de una celda se
+estima con la tasa de victoria de esa misma celda, los estratos donde el par ganó de más
+salen con varianza baja y por tanto con MÁS peso: el peso mira el resultado y la
+agregación se va hacia arriba sola. Sobre un nulo de permutación —barajar quién gana
+dentro de cada estrato— la mediana del lift salía en 1,03 con el 12% de los pares
+"significativos". Usando la tasa del estrato entero el peso sólo depende de los tamaños
+y el nulo vuelve a su sitio.
 """
 from __future__ import annotations
 
