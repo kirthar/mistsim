@@ -1,0 +1,307 @@
+"""Informe legible de la minería de combos.
+
+El formato está pensado para que no se pueda leer un lift sin ver a la vez su soporte y
+su intervalo. Un ranking sin esa columna invita a citar el primer número de la lista, y
+el primer número de la lista es casi siempre el que menos evidencia tiene.
+"""
+from __future__ import annotations
+
+import math
+from collections.abc import Sequence
+
+from mistsim.analysis.mining import (
+    Index,
+    PairResult,
+    TripleResult,
+    calibration,
+    cost_correlation,
+)
+from mistsim.analysis.rules import RuleCheck, undiscovered
+
+RULE = "─" * 78
+
+
+def _rows(lines: list[str], items, render_row, empty: str) -> None:
+    """Vuelca una lista de filas, o una línea explícita de "aquí no hay nada".
+
+    Una sección vacía tiene que decirlo: si desaparece, el lector supone que no se buscó.
+    """
+    if items:
+        lines.extend(render_row(item) for item in items)
+    else:
+        lines.append(empty)
+
+
+def _fmt_lift(value: float) -> str:
+    if not math.isfinite(value):
+        return "  n/d"
+    return f"{value:5.2f}"
+
+
+def _fmt_q(value: float) -> str:
+    if not math.isfinite(value):
+        return " n/d "
+    return f"{value:.3f}" if value >= 0.001 else "<.001"
+
+
+def _fmt_ci(estimate) -> str:
+    """n/d cuando ningún estrato tenía las cuatro celdas: no es un intervalo infinito,
+    es que no hay medición."""
+    if not estimate.estimated or not math.isfinite(estimate.ci_high):
+        return "        n/d"
+    return f"[{estimate.ci_low:4.2f}–{estimate.ci_high:5.2f}]"
+
+
+def _pair_row(pair: PairResult) -> str:
+    names = f"{pair.cards[0]} + {pair.cards[1]}"
+    low, high = pair.wilson()
+    flag = "✔" if pair.synergy.robust() else ("·" if pair.synergy.significant else " ")
+    rules = ",".join(pair.rules) if pair.rules else "—"
+    return (f" {flag} {names:<34.34} {_fmt_lift(pair.synergy.lift)} "
+            f"{_fmt_ci(pair.synergy):<13} q={_fmt_q(pair.synergy.q_value)} "
+            f"n={pair.support:<5d} "
+            f"vict={100 * pair.win_rate:4.1f}% [{100 * low:4.1f}–{100 * high:4.1f}] "
+            f"coste={pair.cost:<3d} {rules:.28}")
+
+
+def _triple_row(triple: TripleResult) -> str:
+    names = " + ".join(triple.cards)
+    flag = "✔" if triple.synergy.robust(min_support=20) else (
+        "·" if triple.synergy.significant else " ")
+    return (f" {flag} {names:<48.48} {_fmt_lift(triple.synergy.lift)} "
+            f"{_fmt_ci(triple.synergy):<13} q={_fmt_q(triple.synergy.q_value)} "
+            f"n={triple.support:<4d} "
+            f"corte-débil={triple.weakest_third:.18}")
+
+
+def header(index: Index, corpus_path: str, size_control: bool) -> list[str]:
+    strata = [s for s in index.strata if s.size]
+    base = index.wins / index.observations if index.observations else 0.0
+    edges = ", ".join(str(e) for e in index.size_edges) or "sin control de tamaño"
+    return [
+        RULE,
+        "MINERÍA DE COMBOS — pares y tríos por encima de la suma de sus partes",
+        RULE,
+        f"Corpus            {corpus_path}",
+        f"Observaciones     {index.observations} asientos · {index.wins} victorias "
+        f"({100 * base:.1f}% base)",
+        f"Estratos          {len(strata)} (arquetipo × jugadores × modo"
+        f"{' × tamaño de mazo' if size_control else ''})",
+        f"Cortes de tamaño  {edges}",
+        f"Pares distintos   {len(index.pair_support)} vistos al menos una vez",
+        "",
+    ]
+
+
+def homebrew_warning() -> list[str]:
+    return [
+        RULE,
+        "AVISO SOBRE LOS DATOS — leer antes que cualquier número de abajo",
+        RULE,
+        "Las 8 cartas de Misión y las 36 del Lord Ruler son HOMEBREW: sus valores están",
+        "inventados porque no hay fuente publicada. En lotes a 3 jugadores el ~84% de las",
+        "partidas termina por completar las tres Misiones, así que la vía de Misión decide",
+        "casi todas las partidas del corpus. Eso infla sistemáticamente a las cartas con",
+        "MISSION y a los efectos que miden posición en las pistas, y desinfla al combate y",
+        "a los motores lentos. Todo el ranking hereda ese sesgo: es una medida del juego",
+        "TAL Y COMO ESTÁ RECONSTRUIDO, no del juego real. Cuando se fotografíen las 8",
+        "cartas de Misión hay que volver a correr esto entero antes de citar nada.",
+        "",
+    ]
+
+
+def calibration_section(pairs: Sequence[PairResult]) -> list[str]:
+    """La sección que hay que mirar antes que el ranking."""
+    cal = calibration(pairs)
+    veredicto = ("centrado: el ajuste por confusor parece completo"
+                 if cal.well_centred else
+                 "DESPLAZADO: queda confusor sin controlar y TODO el ranking está sesgado")
+    return [
+        RULE,
+        "CALIBRACIÓN — mirar esto antes que el ranking",
+        RULE,
+        "La mayoría de los 2 080 pares del juego no interactúan entre sí, así que la",
+        "mediana del lift sobre todos ellos tiene que salir en 1,00. Si sale en 1,15, no",
+        "es que sinergie el 60% del juego: es que falta control y el ranking entero está",
+        "desplazado hacia arriba.",
+        "",
+        f"  pares medidos              {cal.measured}",
+        f"  MEDIANA DEL LIFT           {cal.median_lift:.3f}   → {veredicto}",
+        f"  con el IC fuera del 1      {100 * cal.significant_fraction:.1f}% "
+        f"(bajo el nulo se espera ~5%)",
+        f"  descubrimientos tras BH    {cal.discoveries} (FDR {100 * cal.alpha:.0f}%)",
+        "",
+        "Sin la corrección de Benjamini-Hochberg, probar 2 080 pares al 5% regala ~104",
+        "'hallazgos' aunque no exista ninguno. La columna q es la corregida.",
+        "",
+    ]
+
+
+def confounder_section(pairs: Sequence[PairResult], top: int = 8) -> list[str]:
+    """La sección que justifica todo el aparato estadístico."""
+    check = cost_correlation(pairs)
+    lines = [
+        RULE,
+        "DIAGNÓSTICO DEL CONFUSOR — por qué no vale el lift ingenuo",
+        RULE,
+        "P(ganar|A,B) / (P(ganar|A)·P(ganar|B)) no mide sinergia: mide dinero. Dos cartas",
+        "caras coinciden en el mazo del que tuvo economía, y la economía gana sola.",
+        "Correlaciones de Spearman:",
+        f"  lift INGENUO con el coste del par        ρ = {check.naive_vs_cost:+.3f}",
+        f"  lift ESTRATIFICADO con el coste del par  ρ = {check.synergy_vs_cost:+.3f}",
+        f"  un ranking con el otro                   ρ = {check.naive_vs_synergy:+.3f}",
+        "",
+        "La primera positiva es el confusor: el ranking ingenuo va ordenado por coste.",
+        "La segunda NO tiene que ser cero. A igualdad de tamaño de mazo dos cartas caras",
+        "compiten por los mismos huecos y por las mismas quemas, así que es esperable que",
+        "salga negativa; lo que importa es que ya no es la misma relación. La tercera es",
+        "la decisiva: si fuera alta, el ajuste no habría cambiado nada.",
+        "",
+        f"Top {top} del ranking INGENUO (esto es lo que NO hay que entregar):",
+    ]
+    by_naive = sorted((p for p in pairs if math.isfinite(p.naive)),
+                      key=lambda p: -p.naive)[:top]
+    for pair in by_naive:
+        lines.append(f"   {pair.cards[0]} + {pair.cards[1]:<24.24} "
+                     f"ingenuo={pair.naive:5.2f}  coste={pair.cost:<3d} "
+                     f"n={pair.support:<4d} sinergia real={_fmt_lift(pair.synergy.lift)}"
+                     f" ({pair.synergy.strata_used} estratos)")
+    if by_naive:
+        mean_cost = sum(p.cost for p in by_naive) / len(by_naive)
+        overall = sum(p.cost for p in pairs) / len(pairs)
+        lines.append(f"   coste medio del top ingenuo {mean_cost:.1f} "
+                     f"frente a {overall:.1f} en el conjunto")
+    lines.append("")
+    return lines
+
+
+def pairs_section(pairs: Sequence[PairResult], top: int, min_support: int) -> list[str]:
+    robust = [p for p in pairs if p.synergy.robust(min_support=min_support)]
+    weak = [p for p in pairs if not p.synergy.robust(min_support=min_support)
+            and p.synergy.estimated and p.synergy.lift > 1][:top]
+    anti = sorted((p for p in pairs if p.synergy.robust(min_support=min_support)
+                   and p.synergy.lift < 1), key=lambda p: p.synergy.lift)
+
+    lines = [
+        RULE,
+        "PARES — lift de interacción estratificado",
+        RULE,
+        "Lift = cuánto más aporta B a quien YA tiene A que a quien no. 1,00 = ninguna",
+        "sinergia. ✔ = robusto (soporte suficiente, IC excluye el 1, IC no absurdo).",
+        "· = significativo pero con intervalo demasiado ancho para apostar.",
+        "",
+        f"SINERGIAS ROBUSTAS ({len(robust)})",
+    ]
+    _rows(lines, robust[:top], _pair_row,
+          "  (ninguna: con este corpus ningún par supera los tres criterios a la vez)")
+    lines += ["", f"CANDIDATOS NO CONCLUYENTES (mejores {len(weak)}) — NO citar como hallazgo"]
+    _rows(lines, weak, _pair_row, "  (ninguno)")
+    lines += ["", f"ANTI-SINERGIAS ROBUSTAS ({len(anti)}) — juntas rinden menos que por separado"]
+    _rows(lines, anti[:top], _pair_row, "  (ninguna)")
+    lines.append("")
+    return lines
+
+
+def triples_section(triples: Sequence[TripleResult], top: int) -> list[str]:
+    lines = [
+        RULE,
+        "TRÍOS — lift del corte más débil",
+        RULE,
+        "Cada trío se parte de las tres formas posibles (pareja compuesta + tercera carta)",
+        "y se queda el peor resultado. Así un trío sólo puntúa si aporta sobre CUALQUIERA",
+        "de sus tres pares, y no por arrastrar un buen par con un acompañante.",
+        "",
+    ]
+    good = [t for t in triples if t.synergy.robust(min_support=20)]
+    measured = [t for t in triples if t.synergy.estimated]
+    lines += [f"TRÍOS ROBUSTOS ({len(good)})"]
+    _rows(lines, good[:top], _triple_row,
+          "  (ninguno: los tríos tienen un orden de magnitud menos de soporte que los pares)")
+    rest = [t for t in measured if not t.synergy.robust(min_support=20)][:top]
+    lines += ["", f"MEJORES TRÍOS NO CONCLUYENTES ({len(rest)} de {len(measured)} "
+              f"estimables sobre {len(triples)} con soporte)"]
+    _rows(lines, rest, _triple_row, "  (ninguno)")
+    lines.append("")
+    return lines
+
+
+def rules_section(checks: Sequence[RuleCheck], pairs: Sequence[PairResult]) -> list[str]:
+    lines = [
+        RULE,
+        "CONTRASTE CON LAS 13 REGLAS ESCRITAS A MANO (agents/synergy.py)",
+        RULE,
+        f"{'regla':<34}{'pares':>6}{'conf.':>6}{'contra':>7}{'mediana':>9}  mejor par",
+        "",
+    ]
+    for check in checks:
+        best = f"{check.best[0]} + {check.best[1]}" if check.best else "—"
+        lines.append(f"{check.rule:<34}{check.measured:>6}{check.confirmed:>6}"
+                     f"{check.contradicted:>7}{_fmt_lift(check.median_lift):>9}  "
+                     f"{best:.30} ({_fmt_lift(check.best_lift).strip()})")
+    silent = [c.rule for c in checks if c.measured == 0]
+    if silent:
+        lines += ["", "Reglas sin ningún par por encima del soporte mínimo (el corpus no las",
+                  "contradice: es que no las prueba): " + ", ".join(silent)]
+
+    lines += ["", "PARES FUERTES QUE NINGUNA REGLA PREDICE — lo que aporta la minería"]
+    fresh = [p for p in undiscovered(pairs, top=200) if p.synergy.robust()][:12]
+    _rows(lines, fresh, _pair_row, "  (ninguno robusto; ver la lista de no concluyentes)")
+    lines.append("")
+    return lines
+
+
+def verdict(pairs: Sequence[PairResult], triples: Sequence[TripleResult],
+            index: Index) -> list[str]:
+    """Qué me creo y qué no. Sin esta sección el ranking es peor que no tenerlo."""
+    robust = [p for p in pairs if p.synergy.robust()]
+    significant = [p for p in pairs if p.synergy.significant]
+    measured = [p for p in pairs if p.synergy.estimated]
+    cal = calibration(pairs)
+    check = cost_correlation(pairs)
+    return [
+        RULE,
+        "QUÉ ES ROBUSTO Y QUÉ NO",
+        RULE,
+        f"· {len(measured)} pares de {len(pairs)} con soporte llegaron a tener algún estrato",
+        "  con las cuatro celdas pobladas; el resto sale como n/d, que NO es lift 1.",
+        f"· {len(robust)} de esos {len(measured)} pasan los tres criterios. Sólo ésos",
+        "  son citables. El resto es dirección, no magnitud.",
+        f"· {len(significant) - len(robust)} pares tienen el IC fuera del 1 pero con intervalo",
+        "  demasiado ancho o soporte corto: sospechosos útiles para dirigir el próximo lote,",
+        "  no conclusiones.",
+        f"· Los tríos: {sum(1 for t in triples if t.synergy.robust(min_support=20))} robustos de",
+        f"  {len(triples)}. El soporte de un trío cae con el cubo de la rareza, así que aquí la",
+        "  respuesta honesta casi siempre es 'hace falta más corpus'.",
+        f"· El ajuste cambia el ranking de verdad: ρ(coste) pasa de "
+        f"{check.naive_vs_cost:+.3f} a {check.synergy_vs_cost:+.3f}, y los dos rankings",
+        f"  sólo correlacionan {check.naive_vs_synergy:+.3f} entre sí.",
+        f"· Calibración: mediana del lift {cal.median_lift:.3f}. "
+        + ("Centrada, el ajuste parece completo."
+           if cal.well_centred else
+           "DESPLAZADA: hay confusor sin controlar y nada de lo de arriba es citable."),
+        "· NO es robusto nada que dependa del ritmo de las Misiones: son datos homebrew.",
+        "· El corpus lo juega el `UtilityAgent`, que ya compra guiado por `synergy.RULES`.",
+        "  Eso sesga QUÉ pares llegan a tener soporte, no el contraste dentro del estrato,",
+        "  pero significa que un par que ninguna regla favorece necesita más partidas para",
+        "  llegar al mismo soporte. Los pares 'sin regla' están, por construcción, medidos",
+        "  con menos precisión que los predichos.",
+        "· En PvP los asientos de una misma partida no son independientes (gana uno solo),",
+        f"  así que los IC de arriba son algo optimistas. Con {index.observations} asientos el",
+        "  efecto es pequeño frente al ancho de los intervalos, pero está.",
+        "",
+    ]
+
+
+def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
+           checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
+           top: int = 25, min_support: int = 30) -> str:
+    lines: list[str] = []
+    lines += header(index, corpus_path, size_control)
+    lines += homebrew_warning()
+    lines += calibration_section(pairs)
+    lines += confounder_section(pairs)
+    lines += pairs_section(pairs, top, min_support)
+    lines += triples_section(triples, top)
+    lines += rules_section(checks, pairs)
+    lines += verdict(pairs, triples, index)
+    return "\n".join(lines)
