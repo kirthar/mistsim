@@ -20,6 +20,13 @@ en el mazo del jugador que tuvo economía, y la economía gana partidas por su c
 Comparando sólo dentro del mismo tramo de tamaño de mazo, esa vía queda cerrada. Se
 puede desactivar (`size_control=False`) precisamente para enseñar cuánto cambia.
 
+Cuántos tramos hacen falta no es una constante: depende del tamaño del corpus, porque
+con pocas partidas la mitad de los estratos se cae por falta de celdas y el estimador
+queda atenuado. `tune_size_buckets` los sube hasta que la mediana del lift de los ~2 000
+pares vuelve a 1, que es el diagnóstico nulo de `Calibration`. Con terciles y 30 000
+partidas esa mediana se queda en 1,14 y salen 1 500 "descubrimientos"; con veinte
+tramos, en 1,01 y salen seis.
+
 Implementación
 --------------
 Un `int` de Python por carta y estrato hace de bitset sobre las observaciones de ese
@@ -86,6 +93,9 @@ def bucket_edges(sizes: Sequence[int], buckets: int) -> list[int]:
     Por cuantiles y no fijos porque el tamaño típico depende del modo y del tope de
     turnos: unos cortes en 4/8/12 dejarían todos los asientos de las partidas cortas en
     el mismo tramo y el control no controlaría nada.
+
+    Pedir N tramos puede dar menos: si dos cuantiles caen en el mismo tamaño entero, el
+    corte se descarta en vez de crear un tramo vacío.
     """
     if buckets <= 1 or not sizes:
         return []
