@@ -81,6 +81,13 @@ def cmd_combos(args: argparse.Namespace) -> int:
     checks = rules.check_rules(pairs, min_support=args.min_support)
     patterns = mining.pattern_summary(pairs, rules.mechanical_groups())
 
+    permutation = None
+    if not args.no_permutation:
+        permutation = mining.permutation_null(
+            observations, size_buckets=buckets,
+            size_control=not args.no_size_control,
+            min_support=args.min_support, min_cell=args.min_cell)
+
     replication = None
     if not args.no_replication:
         robustos = [p for p in pairs if p.synergy.robust(min_support=args.min_support)]
@@ -93,19 +100,20 @@ def cmd_combos(args: argparse.Namespace) -> int:
                          size_control=not args.no_size_control, top=args.top,
                          min_support=args.min_support, replication=replication,
                          computed_triples=not args.no_triples, tuning=trace,
-                         patterns=patterns)
+                         patterns=patterns, permutation=permutation)
     print(text)
 
     if args.json:
         Path(args.json).parent.mkdir(parents=True, exist_ok=True)
-        volcado = _as_json(index, pairs, triples, checks, replication, patterns)
+        volcado = _as_json(index, pairs, triples, checks, replication, patterns,
+                           permutation)
         Path(args.json).write_text(
             json.dumps(volcado, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nRanking completo en {args.json}", file=sys.stderr)
     return 0
 
 
-def _as_json(index, pairs, triples, checks, rep=None, patterns=()) -> dict:
+def _as_json(index, pairs, triples, checks, rep=None, patterns=(), perm=None) -> dict:
     """Volcado completo, para el visor web y para rehacer gráficas sin re-minar."""
     def estimate(e):
         return {"lift": e.lift, "ci_low": e.ci_low, "ci_high": e.ci_high,
@@ -128,6 +136,9 @@ def _as_json(index, pairs, triples, checks, rep=None, patterns=()) -> dict:
         "triples": [{"cards": list(t.cards), "support": t.support, "cost": t.cost,
                      "weakest_third": t.weakest_third, "rules": list(t.rules),
                      **estimate(t.synergy)} for t in triples],
+        "permutation_null": ({"median_lift": perm.median_lift,
+                              "significant_fraction": perm.significant_fraction,
+                              "discoveries": perm.discoveries} if perm else None),
         "replication": ({"checked": rep.checked, "same_direction": rep.same_direction,
                          "rank_agreement": rep.rank_agreement} if rep else None),
         "patterns": [{"name": p.name, "pairs": p.pairs, "median_lift": p.median_lift,
@@ -168,6 +179,9 @@ def register(subparsers) -> None:
     parser.add_argument("--no-size-control", action="store_true",
                         help="no estratificar por tamaño de mazo (para ver cuánto cambia)")
     parser.add_argument("--no-triples", action="store_true")
+    parser.add_argument("--no-permutation", action="store_true",
+                        help="no correr el nulo de permutación (el control que separa "
+                             "'hay señal' de 'el método fabrica señal')")
     parser.add_argument("--no-replication", action="store_true",
                         help="no rehacer el análisis en dos mitades del corpus")
     parser.add_argument("--top", type=int, default=25, help="filas por sección")

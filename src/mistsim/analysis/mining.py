@@ -39,6 +39,7 @@ import bisect
 import collections
 import itertools
 import math
+import random
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
@@ -624,3 +625,50 @@ def pattern_summary(pairs: Sequence[PairResult],
                            sign_p=math.erfc(z / math.sqrt(2))))
     out.sort(key=lambda p: -p.pairs)
     return out
+
+
+# --- nulo de permutación -----------------------------------------------------
+
+
+def permute_within_strata(observations: Sequence[Observation], *, size_buckets: int,
+                          size_control: bool = True, seed: int = 0) -> list[Observation]:
+    """Baraja quién gana DENTRO de cada estrato.
+
+    Conserva todo lo que confunde —el tamaño de mazo, el arquetipo, el número de
+    jugadores, qué cartas compra cada quién— y destruye únicamente la asociación entre
+    las cartas concretas y la victoria. Sobre el resultado, la respuesta correcta para
+    los 2 080 pares es lift 1: cualquier cosa que salga la ha fabricado el método.
+    """
+    edges = bucket_edges([o.size for o in observations], size_buckets) if size_control else []
+    groups: dict[StratumKey, list[int]] = collections.defaultdict(list)
+    for i, obs in enumerate(observations):
+        bucket = bisect.bisect_right(edges, obs.size) if edges else 0
+        groups[(obs.strategy, obs.players, obs.mode, bucket)].append(i)
+
+    rng = random.Random(seed)
+    out = list(observations)
+    for indices in groups.values():
+        wins = [observations[i].won for i in indices]
+        rng.shuffle(wins)
+        for i, won in zip(indices, wins, strict=True):
+            original = observations[i]
+            out[i] = Observation(original.strategy, original.players, original.mode,
+                                 original.cards, won, original.game)
+    return out
+
+
+def permutation_null(observations: Sequence[Observation], *, size_buckets: int,
+                     size_control: bool = True, min_support: int = 30,
+                     min_cell: int = 5, seed: int = 0) -> Calibration:
+    """Corre la minería entera sobre datos barajados. Es el control decisivo.
+
+    La calibración por la mediana dice si el ranking está desplazado; esto dice si el
+    método fabrica significación. Son cosas distintas y las dos hacen falta: un
+    estimador puede tener la mediana clavada en 1 y aun así dar el 12% de pares
+    "significativos" sobre ruido puro, que es exactamente lo que pasaba antes de
+    arreglar los pesos.
+    """
+    shuffled = permute_within_strata(observations, size_buckets=size_buckets,
+                                     size_control=size_control, seed=seed)
+    index = build_index(shuffled, size_control=size_control, size_buckets=size_buckets)
+    return calibration(mine_pairs(index, min_support=min_support, min_cell=min_cell))

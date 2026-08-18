@@ -271,6 +271,36 @@ def rules_section(checks: Sequence[RuleCheck], pairs: Sequence[PairResult]) -> l
     return lines
 
 
+def permutation_section(null, real) -> list[str]:
+    """El control que separa "hay señal" de "el método fabrica señal"."""
+    exceso = (real.significant_fraction / null.significant_fraction
+              if null.significant_fraction else float("inf"))
+    veredicto = ("la señal del ranking es real: sobre datos barajados no queda nada"
+                 if null.discoveries == 0 and null.significant_fraction < 0.09 else
+                 "CUIDADO: el método produce significación sobre datos barajados; "
+                 "el ranking no vale")
+    return [
+        RULE,
+        "NULO DE PERMUTACIÓN — el método contra sí mismo",
+        RULE,
+        "Se baraja quién gana DENTRO de cada estrato. Eso conserva todo lo que confunde",
+        "—tamaño de mazo, arquetipo, jugadores, qué compra cada quién— y destruye sólo la",
+        "asociación entre cartas y victoria. La respuesta correcta pasa a ser lift 1 para",
+        "los 2 080 pares, así que lo que salga lo ha fabricado el método.",
+        "",
+        f"{'':<12}{'mediana':>10}{'IC fuera del 1':>17}{'descubrimientos':>17}",
+        f"{'barajado':<12}{null.median_lift:>10.3f}"
+        f"{100 * null.significant_fraction:>16.1f}%{null.discoveries:>17}",
+        f"{'real':<12}{real.median_lift:>10.3f}"
+        f"{100 * real.significant_fraction:>16.1f}%{real.discoveries:>17}",
+        "",
+        f"El corpus real da {exceso:.1f}× más pares significativos que el barajado. "
+        f"Veredicto:",
+        f"{veredicto}.",
+        "",
+    ]
+
+
 def patterns_section(patterns) -> list[str]:
     """Los grupos mecánicos de pares, que sí tienen potencia."""
     lines = [
@@ -425,7 +455,8 @@ def explain_section(index: Index, a: str, b: str, min_cell: int) -> str:
 def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
            checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
            top: int = 25, min_support: int = 30, replication=None,
-           computed_triples: bool = True, tuning=(), patterns=()) -> str:
+           computed_triples: bool = True, tuning=(), patterns=(),
+           permutation=None) -> str:
     lines: list[str] = []
     lines += header(index, corpus_path, size_control)
     lines += homebrew_warning()
@@ -437,6 +468,8 @@ def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleRe
     lines += rules_section(checks, pairs)
     if patterns:
         lines += patterns_section(patterns)
+    if permutation is not None:
+        lines += permutation_section(permutation, calibration(pairs))
     if replication is not None:
         lines += replication_section(replication)
     lines += verdict(pairs, triples, index)

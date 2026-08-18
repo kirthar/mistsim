@@ -733,34 +733,39 @@ def test_el_peso_de_un_estrato_no_puede_depender_de_si_ese_estrato_gano():
 def test_bajo_un_nulo_de_permutacion_el_estimador_no_inventa_sinergias():
     """El contraste definitivo: si se baraja quién gana, no puede quedar nada.
 
-    Se construye un corpus con confusor de dinero fuerte y luego se permuta la victoria
-    DENTRO de cada estrato, lo que destruye toda asociación entre cartas y resultado.
-    La respuesta correcta para los 91 pares es lift 1. Este test es el que habría
-    cazado el sesgo de pesos que tenía el estimador: la mediana salía en 1,03 y el 12%
-    de los pares daba "significativo" sobre datos barajados.
+    Es el test que habría cazado el sesgo de pesos que tenía el estimador: la mediana
+    salía en 1,03 y el 12% de los pares daba "significativo" sobre datos barajados.
+    Nótese que la calibración por la mediana y esto NO son lo mismo: un estimador puede
+    tener la mediana clavada en 1 y aun así fabricar significación a mansalva.
     """
-    rng = random.Random(7)
     rows = _poblacion_sin_ninguna_sinergia(24000, seed=3)
-
-    # Se baraja dentro de cada tamaño de mazo, que es el estrato que importa aquí: así
-    # se conserva la relación tamaño→victoria (el confusor) y se destruye la de las
-    # cartas concretas con la victoria (lo que se quiere medir).
-    barajado: list[Observation] = []
-    por_tamano: dict[int, list[Observation]] = {}
-    for o in rows:
-        por_tamano.setdefault(o.size, []).append(o)
-    for grupo in por_tamano.values():
-        victorias = [o.won for o in grupo]
-        rng.shuffle(victorias)
-        barajado.extend(
-            Observation(o.strategy, o.players, o.mode, o.cards, w, o.game)
-            for o, w in zip(grupo, victorias, strict=True))
-
-    index = mining.build_index(barajado, size_control=True, size_buckets=12)
-    cal = mining.calibration(mining.mine_pairs(index, min_support=30, min_cell=5))
+    cal = mining.permutation_null(rows, size_buckets=12, min_support=30, min_cell=5)
     assert cal.median_lift == pytest.approx(1.0, abs=0.03)
     assert cal.significant_fraction < 0.12
     assert cal.discoveries == 0, "sobre datos barajados no puede sobrevivir ninguno"
+
+
+def test_la_permutacion_conserva_el_confusor_y_sólo_rompe_la_senal():
+    """Barajar dentro del estrato no puede tocar ni los mazos ni el tamaño."""
+    rows = _poblacion_sin_ninguna_sinergia(4000, seed=9)
+    barajado = mining.permute_within_strata(rows, size_buckets=8)
+    assert len(barajado) == len(rows)
+    assert [o.cards for o in barajado] == [o.cards for o in rows]
+    assert [o.size for o in barajado] == [o.size for o in rows]
+    assert sum(o.won for o in barajado) == sum(o.won for o in rows)
+    assert [o.won for o in barajado] != [o.won for o in rows], "algo tiene que moverse"
+
+
+def test_el_nulo_de_permutacion_no_borra_una_senal_de_verdad():
+    """Corolario: sobre datos SIN barajar la misma pipeline sí encuentra el par real."""
+    rng = random.Random(77)
+    rows = synthetic(rng, 20000, p_a=0.5, p_b=0.5, base=0.12, effect_a=1.2,
+                     effect_b=1.2, interaction=2.2, filler=5)
+    index = mining.build_index(rows, size_control=True, size_buckets=12)
+    real = mining.calibration(mining.mine_pairs(index, min_support=30, min_cell=5))
+    nulo = mining.permutation_null(rows, size_buckets=12, min_support=30, min_cell=5)
+    assert real.discoveries > nulo.discoveries
+    assert real.significant_fraction > nulo.significant_fraction
 
 
 def test_el_autoajuste_sube_por_la_escalera_hasta_centrar_la_mediana():
