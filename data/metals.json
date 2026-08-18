@@ -1,0 +1,36 @@
+{
+  "metals": [
+    {"name": "Pewter", "keyword": "Defender", "focus": "Combat and Healing", "pairs_with": "Tin"},
+    {"name": "Tin", "keyword": "Sense", "focus": "Mission points and Coins; effects vary by position on Mission Tracks", "pairs_with": "Pewter"},
+    {"name": "Bronze", "keyword": "Seek", "focus": "Mission points; use top ability of market Actions", "pairs_with": "Copper"},
+    {"name": "Copper", "keyword": "Cloud", "focus": "Healing and damage prevention", "pairs_with": "Bronze"},
+    {"name": "Zinc", "keyword": "Riot", "focus": "Coins; activate Allies without burning metal", "pairs_with": "Brass"},
+    {"name": "Brass", "keyword": "Soothe", "focus": "Mission points and Coins; eliminate cards", "pairs_with": "Zinc"},
+    {"name": "Iron", "keyword": "Pull", "focus": "Combat; move cards from discard to top of deck", "pairs_with": "Steel"},
+    {"name": "Steel", "keyword": "Push", "focus": "Combat, Coins, market manipulation, retrieve from eliminated pile", "pairs_with": "Iron"},
+    {"name": "Atium", "keyword": null, "focus": "Wildcard metal; powers any card or refreshes any flared metal; powerful Mission/Combat cards", "pairs_with": null, "single_use": true, "cannot_be_flared": true}
+  ],
+  "keyword_definitions": {
+    "Defender": "Damage cannot target the player or their non-Defender Allies while a Defender Ally is in play. Defenders must be killed first.",
+    "Sense": "Stops other players from advancing on a Mission Track for the rest of that turn, even if they gain more Mission points afterward. NO EFFECT on the Lord Ruler in Solo/Co-op mode.",
+    "Seek": "Use the top (primary) ability ONLY of an Action card (not Ally) in the market, up to the listed cost limit. Never reaches the secondary/+metal ability of the target card.",
+    "Cloud": "Either reduces incoming damage to a player, or protects an Ally from being eliminated (attacking combat is still spent either way).",
+    "Riot": "Activate the top ability of one of your Allies that hasn't been activated via Riot this turn (per current errata; does not block a separate normal burn-activation of that same Ally).",
+    "Soothe": "Eliminate a card from hand, discard pile, or in-play area (even a card already resolved this turn). Eliminated cards go to a shared Eliminated pile.",
+    "Pull": "Move a card from your discard pile to the top of your deck. Does NOT draw it to hand immediately.",
+    "Push": "Eliminate a card from the market; it is replaced immediately from the market deck."
+  },
+  "burning_rules": {
+    "base_burns_per_turn": 1,
+    "max_burns_at_end_of_training_track": 4,
+    "cards_as_metal": "A card can be played sideways showing its metal vial (matching one of its metal_pair) to power another card. This does NOT count against the limited metal token burns per turn. No limit on number of cards used as metal per turn.",
+    "flaring": "To use more metal burns than your current limit, flip an unused token to its Flared (dark) side. Flared tokens cannot be used again until refreshed. Flaring counts as burning for all trigger purposes.",
+    "refreshing": "Discard a card whose metal_pair vial matches the flared metal to refresh it (flip back). Refreshing does NOT count as burning for Ally/character/Savant triggers. A metal can be flared, refreshed, and used again same turn (but not flared->refreshed->flared again).",
+    "atium_rules": "Atium cannot be flared. Must have a burn slot available to use it. Used as wildcard for any metal cost; counts as BOTH Atium and the substituted metal for Ally/character ability purposes. Single-use, returns to supply after the turn."
+  },
+  "ability_activation_rules": {
+    "once_per_turn_effects": "Ally metal-triggered abilities, character signature-metal ability, and character Atium-trigger ability all activate ONLY ONCE per turn no matter how many times that metal is burned that turn. Riot can grant one additional activation per Ally per turn distinct from the normal burn-triggered activation.",
+    "top_ability_must_activate_first": "On multi-tier Action cards, the secondary (+metal) ability cannot be activated without first activating the primary ability that turn.",
+    "savant_abilities": "Some cards have a bonus effect that ONLY triggers when the card is used AS a metal (played sideways), not when played normally or discarded to refresh."
+  }
+}

@@ -1,0 +1,285 @@
+[
+  {
+    "card": "Ascendant",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 IRON\""
+  },
+  {
+    "card": "Assassinate",
+    "field": "primary.effects.combat",
+    "was": 1,
+    "now": 3,
+    "why": "las espadas muestran 3, no 1"
+  },
+  {
+    "card": "Coppercloud",
+    "field": "primary.effects.coin",
+    "was": null,
+    "now": 1,
+    "why": "moneda 1 omitida en el JSON"
+  },
+  {
+    "card": "Crash",
+    "field": "primary.effects.combat",
+    "was": 1,
+    "now": 2,
+    "why": "las espadas muestran 2, no 1"
+  },
+  {
+    "card": "Crash",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "combat": 2
+    },
+    "why": "savant omitido (el vial muestra combate 2)"
+  },
+  {
+    "card": "Cushing Blow",
+    "field": "name",
+    "was": "Cushing Blow",
+    "now": "Crushing Blow",
+    "why": "el nombre impreso es \"Crushing Blow\""
+  },
+  {
+    "card": "Cushing Blow",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 PEWTER\""
+  },
+  {
+    "card": "Dominate",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 BRASS\""
+  },
+  {
+    "card": "Eavesdrop",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "coin": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Hide",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "combat": 2
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "House War",
+    "field": "primary.effects.combat",
+    "was": null,
+    "now": 2,
+    "why": "combate 2 omitido en el JSON"
+  },
+  {
+    "card": "House War",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 ZINC\""
+  },
+  {
+    "card": "Hyperaware",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 TIN\""
+  },
+  {
+    "card": "Infiltrate",
+    "field": "primary.effects",
+    "was": {
+      "mission": 2,
+      "coin": 2
+    },
+    "now": {
+      "combat": 2,
+      "coin": 2
+    },
+    "why": "el primer glifo es espadas, no misión"
+  },
+  {
+    "card": "Infiltrate",
+    "field": "secondary.effects",
+    "was": {
+      "mission": 2
+    },
+    "now": {
+      "combat": 1,
+      "mission": 2
+    },
+    "why": "combate 1 omitido"
+  },
+  {
+    "card": "Lookout",
+    "field": "primary.effects",
+    "was": {
+      "coin": 2
+    },
+    "now": {
+      "mission": 2
+    },
+    "why": "glifo cuadrado (misión), no círculo (moneda)"
+  },
+  {
+    "card": "Lurcher",
+    "field": "primary.effects.combat",
+    "was": 1,
+    "now": 2,
+    "why": "las espadas muestran 2, no 1"
+  },
+  {
+    "card": "Maelstrom",
+    "field": "secondary.extra_burns",
+    "was": 1,
+    "now": 2,
+    "why": "la carta imprime \"+2 STEEL\""
+  },
+  {
+    "card": "Noble",
+    "field": "defense",
+    "was": 3,
+    "now": 2,
+    "why": "el escudo muestra 2, no 3"
+  },
+  {
+    "card": "Pacify",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "train": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Precise Shot",
+    "field": "primary.effects.combat",
+    "was": 1,
+    "now": 3,
+    "why": "las espadas muestran 3, no 1"
+  },
+  {
+    "card": "Pursue",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "mission": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Reposition",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "combat": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Rescue",
+    "field": "primary.effects.combat",
+    "was": 1,
+    "now": 3,
+    "why": "las espadas muestran 3, no 1"
+  },
+  {
+    "card": "Soar",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "mission": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Steelpush",
+    "field": "primary.effects",
+    "was": {
+      "train_or_combat_choice": 1
+    },
+    "now": {
+      "choice_of": [
+        "train:1",
+        "combat:3"
+      ]
+    },
+    "why": "es una elección entrenamiento/combate, con valores 1 y 3"
+  },
+  {
+    "card": "Steelpush",
+    "field": "secondary.effects",
+    "was": {
+      "combat": 1,
+      "coin": 2
+    },
+    "now": {
+      "combat": 1,
+      "mission": 2
+    },
+    "why": "glifo cuadrado (misión), no círculo (moneda)"
+  },
+  {
+    "card": "Strategize",
+    "field": "secondary.effects",
+    "was": {
+      "choice_of": [
+        "train:1",
+        "combat:3",
+        "coin:5",
+        "heal:5"
+      ]
+    },
+    "now": {
+      "choice_of": [
+        "train:1",
+        "combat:4",
+        "mission:3",
+        "heal:5",
+        "coin:5"
+      ]
+    },
+    "why": "faltaba la opción de misión y el combate es 4, no 3"
+  },
+  {
+    "card": "Strike",
+    "field": "savant",
+    "was": null,
+    "now": {
+      "heal": 1
+    },
+    "why": "savant omitido"
+  },
+  {
+    "card": "Train in Secret",
+    "field": "primary.effects",
+    "was": {
+      "choice_of": [
+        "train:1",
+        "combat:2",
+        "coin:2",
+        "heal:3"
+      ]
+    },
+    "now": {
+      "choice_of": [
+        "train:1",
+        "combat:2",
+        "mission:2",
+        "heal:3"
+      ]
+    },
+    "why": "glifo cuadrado (misión), no círculo (moneda)"
+  }
+]

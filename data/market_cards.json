@@ -1,0 +1,1555 @@
+{
+  "_meta": {
+    "total_named_cards": 65,
+    "total_physical_cards": 82,
+    "note": "48 cartas tienen 1 copia física, 17 cartas tienen 2 copias físicas (campo 'copies'). Verificado contra la caja física del juego por el usuario. No sigue un patrón de coste único.",
+    "verification": "Las 65 cartas re-derivadas una a una de sus imágenes (recortes ampliados x4/x5); la imagen manda sobre cualquier transcripción previa. 25 cartas corregidas, ver data/verify/DIFF.md. Integridad: 65 números de carta distintos sobre 82, con 17 huecos = las 17 cartas de 2 copias."
+  },
+  "cards": [
+    {
+      "name": "Preserve",
+      "type": "Action",
+      "cost": 8,
+      "copies": 1,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "mission": 5,
+          "combat": 2
+        }
+      },
+      "secondary": null,
+      "card_number": 1,
+      "verified_from_image": true
+    },
+    {
+      "name": "Ruin",
+      "type": "Action",
+      "cost": 8,
+      "copies": 1,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "mission": 1,
+          "combat": 7
+        }
+      },
+      "secondary": null,
+      "card_number": 2,
+      "verified_from_image": true
+    },
+    {
+      "name": "Balance",
+      "type": "Action",
+      "cost": 8,
+      "copies": 1,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "mission": 4,
+          "combat": 4
+        }
+      },
+      "secondary": null,
+      "card_number": 3,
+      "verified_from_image": true
+    },
+    {
+      "name": "Confrontation",
+      "type": "Action",
+      "cost": 9,
+      "copies": 1,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "play_top_ability_of_eliminated_card": 1
+        }
+      },
+      "secondary": {
+        "metal": "Atium",
+        "extra_burns": 3,
+        "effects": {
+          "win_game": true
+        }
+      },
+      "card_number": 4,
+      "verified_from_image": true
+    },
+    {
+      "name": "Kandra",
+      "type": "Ally",
+      "cost": 6,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "mission": 3
+        }
+      },
+      "secondary": {
+        "metal": "Atium",
+        "extra_burns": 1,
+        "effects": {
+          "mission": 3
+        }
+      },
+      "card_number": 5,
+      "verified_from_image": true
+    },
+    {
+      "name": "Inquisitor",
+      "type": "Ally",
+      "cost": 6,
+      "copies": 1,
+      "defense": 4,
+      "metal_pair": [
+        "Atium"
+      ],
+      "primary": {
+        "metal": "Atium",
+        "effects": {
+          "combat": 4
+        }
+      },
+      "secondary": {
+        "metal": "Atium",
+        "extra_burns": 1,
+        "effects": {
+          "combat": 4
+        }
+      },
+      "card_number": 6,
+      "verified_from_image": true
+    },
+    {
+      "name": "Pacify",
+      "type": "Action",
+      "cost": 4,
+      "copies": 1,
+      "metal_pair": [
+        "Brass",
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "train": 1,
+          "soothe": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 7,
+      "verified_from_image": true,
+      "savant": {
+        "train": 1
+      }
+    },
+    {
+      "name": "Subdue",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Brass",
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "soothe": 2
+        }
+      },
+      "secondary": {
+        "metal": "Brass",
+        "extra_burns": 1,
+        "effects": {
+          "gain_market_card_to_discard_max_cost": 5
+        }
+      },
+      "card_number": 8,
+      "verified_from_image": true
+    },
+    {
+      "name": "Dominate",
+      "type": "Action",
+      "cost": 6,
+      "metal_pair": [
+        "Brass",
+        "Zinc"
+      ],
+      "copies": 1,
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "mission": 2,
+          "soothe": 2
+        }
+      },
+      "secondary": {
+        "metal": "Brass",
+        "extra_burns": 2,
+        "effects": {
+          "convert_all_mission_to_combat": true
+        }
+      },
+      "card_number": 9,
+      "verified_from_image": true
+    },
+    {
+      "name": "Con",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Brass",
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "mission": 1,
+          "coin": 1,
+          "soothe": 1
+        }
+      },
+      "secondary": null,
+      "savant": {
+        "coin": 1
+      },
+      "card_number": 11,
+      "verified_from_image": true
+    },
+    {
+      "name": "Deceive",
+      "type": "Action",
+      "cost": 4,
+      "copies": 2,
+      "metal_pair": [
+        "Brass",
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "coin": 2,
+          "soothe": 2
+        }
+      },
+      "secondary": {
+        "metal": "Brass",
+        "extra_burns": 1,
+        "effects": {
+          "coin": 2
+        }
+      },
+      "card_number": 13,
+      "verified_from_image": true
+    },
+    {
+      "name": "Informant",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "mission": 1,
+          "look_top_deck_eliminate_or_return": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 14,
+      "verified_from_image": true
+    },
+    {
+      "name": "Soother",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Brass",
+        "effects": {
+          "mission": 2
+        }
+      },
+      "secondary": {
+        "metal": "Brass",
+        "extra_burns": 1,
+        "effects": {
+          "soothe": 2
+        }
+      },
+      "_correction_note": "Corregido: primary era erróneamente 'train:1' en una version anterior. Verificado contra carta física del usuario: 2 Puntos de Misión, no subida de Entrenamiento.",
+      "card_number": 15,
+      "verified_from_image": true
+    },
+    {
+      "name": "Infiltrate",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Bronze",
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "combat": 2,
+          "coin": 2
+        }
+      },
+      "secondary": {
+        "metal": "Bronze",
+        "extra_burns": 1,
+        "effects": {
+          "combat": 1,
+          "mission": 2
+        }
+      },
+      "card_number": 16,
+      "verified_from_image": true
+    },
+    {
+      "name": "Pursue",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Bronze",
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "mission": 2,
+          "coin": 2
+        }
+      },
+      "secondary": null,
+      "card_number": 17,
+      "verified_from_image": true,
+      "savant": {
+        "mission": 1
+      }
+    },
+    {
+      "name": "Pierce",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Bronze",
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "mission": 3,
+          "seek": 5
+        }
+      },
+      "secondary": {
+        "metal": "Bronze",
+        "extra_burns": 2,
+        "effects": {
+          "seek_two_different_cards": 6
+        }
+      },
+      "card_number": 18,
+      "verified_from_image": true
+    },
+    {
+      "name": "Hunt",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Bronze",
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "seek": 3
+        }
+      },
+      "secondary": null,
+      "card_number": 20,
+      "verified_from_image": true
+    },
+    {
+      "name": "Obligator",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "seek": 3
+        }
+      },
+      "secondary": null,
+      "card_number": 21,
+      "verified_from_image": true
+    },
+    {
+      "name": "Unveil",
+      "type": "Action",
+      "cost": 5,
+      "copies": 2,
+      "metal_pair": [
+        "Bronze",
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "mission": 3
+        }
+      },
+      "secondary": {
+        "metal": "Bronze",
+        "extra_burns": 1,
+        "effects": {
+          "seek": 6
+        }
+      },
+      "card_number": 23,
+      "verified_from_image": true
+    },
+    {
+      "name": "Seeker",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Bronze",
+        "effects": {
+          "seek": 5
+        }
+      },
+      "secondary": {
+        "metal": "Bronze",
+        "extra_burns": 1,
+        "effects": {
+          "repeat_own_top_ability": true
+        }
+      },
+      "card_number": 24,
+      "verified_from_image": true
+    },
+    {
+      "name": "Sneak",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Copper",
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "mission": 2
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "cloud": 3
+      },
+      "card_number": 25,
+      "verified_from_image": true
+    },
+    {
+      "name": "Train in Secret",
+      "type": "Action",
+      "cost": 4,
+      "copies": 1,
+      "metal_pair": [
+        "Copper",
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "choice_of": [
+            "train:1",
+            "combat:2",
+            "mission:2",
+            "heal:3"
+          ]
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "cloud": 3
+      },
+      "card_number": 26,
+      "verified_from_image": true
+    },
+    {
+      "name": "Strategize",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Copper",
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "train": 1,
+          "combat": 1,
+          "mission": 1,
+          "heal": 1,
+          "coin": 1
+        }
+      },
+      "secondary": {
+        "metal": "Copper",
+        "extra_burns": 2,
+        "effects": {
+          "choice_of": [
+            "train:1",
+            "combat:4",
+            "mission:3",
+            "heal:5",
+            "coin:5"
+          ]
+        }
+      },
+      "card_number": 27,
+      "verified_from_image": true
+    },
+    {
+      "name": "Coppercloud",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Copper",
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "draw_if_lowest_on_any_mission_track": 1,
+          "coin": 1
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "cloud": 3
+      },
+      "card_number": 29,
+      "verified_from_image": true
+    },
+    {
+      "name": "Hide",
+      "type": "Action",
+      "cost": 4,
+      "copies": 2,
+      "metal_pair": [
+        "Copper",
+        "Bronze"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "heal": 3
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "cloud_protect_ally": true
+      },
+      "card_number": 31,
+      "verified_from_image": true,
+      "savant": {
+        "combat": 2
+      }
+    },
+    {
+      "name": "Keeper",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "set_aside_hand_card_draw_next_turn": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 32,
+      "verified_from_image": true
+    },
+    {
+      "name": "Smoker",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Copper"
+      ],
+      "primary": {
+        "metal": "Copper",
+        "effects": {
+          "heal": 2
+        }
+      },
+      "secondary": null,
+      "ongoing": "reduce_damage_taken_by_1",
+      "card_number": 33,
+      "verified_from_image": true
+    },
+    {
+      "name": "Reposition",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Iron",
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "combat_or_coin_choice": 2
+        }
+      },
+      "secondary": null,
+      "refresh_any_flared_metal": true,
+      "card_number": 34,
+      "verified_from_image": true,
+      "savant": {
+        "combat": 1
+      }
+    },
+    {
+      "name": "Rescue",
+      "type": "Action",
+      "cost": 4,
+      "copies": 1,
+      "metal_pair": [
+        "Iron",
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "combat": 3,
+          "coin": 2,
+          "pull": 3
+        }
+      },
+      "secondary": null,
+      "card_number": 35,
+      "verified_from_image": true
+    },
+    {
+      "name": "Ascendant",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Iron",
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "pull": 3,
+          "combat": 4
+        }
+      },
+      "secondary": {
+        "metal": "Iron",
+        "extra_burns": 2,
+        "effects": {
+          "draw": 3
+        }
+      },
+      "card_number": 36,
+      "verified_from_image": true
+    },
+    {
+      "name": "Ironpull",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Iron",
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "combat": 2,
+          "pull": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 37,
+      "verified_from_image": true
+    },
+    {
+      "name": "Crash",
+      "type": "Action",
+      "cost": 4,
+      "copies": 2,
+      "metal_pair": [
+        "Iron",
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "pull": 1,
+          "combat": 2
+        }
+      },
+      "secondary": {
+        "metal": "Iron",
+        "extra_burns": 1,
+        "effects": {
+          "draw": 1
+        }
+      },
+      "card_number": 39,
+      "verified_from_image": true,
+      "savant": {
+        "combat": 2
+      }
+    },
+    {
+      "name": "Lurcher",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "combat": 2
+        }
+      },
+      "secondary": {
+        "metal": "Iron",
+        "extra_burns": 1,
+        "effects": {
+          "pull": 2
+        }
+      },
+      "card_number": 42,
+      "verified_from_image": true
+    },
+    {
+      "name": "Recover",
+      "type": "Action",
+      "cost": 2,
+      "copies": 1,
+      "metal_pair": [
+        "Pewter",
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "coin": 2,
+          "heal": 2
+        }
+      },
+      "secondary": {
+        "metal": "Pewter",
+        "extra_burns": 1,
+        "effects": {
+          "coin": 2,
+          "heal": 3
+        }
+      },
+      "card_number": 43,
+      "verified_from_image": true
+    },
+    {
+      "name": "Brawl",
+      "type": "Action",
+      "cost": 4,
+      "copies": 1,
+      "metal_pair": [
+        "Pewter",
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "combat": 3,
+          "coin": 2
+        }
+      },
+      "secondary": null,
+      "savant": {
+        "combat": 2
+      },
+      "card_number": 44,
+      "verified_from_image": true
+    },
+    {
+      "name": "Crushing Blow",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Pewter",
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "combat": 6
+        }
+      },
+      "secondary": {
+        "metal": "Pewter",
+        "extra_burns": 2,
+        "effects": {
+          "heal": 8
+        }
+      },
+      "card_number": 45,
+      "verified_from_image": true
+    },
+    {
+      "name": "Pickpocket",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Iron",
+        "effects": {
+          "coin": 1
+        }
+      },
+      "secondary": {
+        "metal": "Iron",
+        "extra_burns": 1,
+        "effects": {
+          "pull": 1
+        }
+      },
+      "card_number": 46,
+      "verified_from_image": true
+    },
+    {
+      "name": "Strike",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Pewter",
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "combat": 2,
+          "heal": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 47,
+      "verified_from_image": true,
+      "savant": {
+        "heal": 1
+      }
+    },
+    {
+      "name": "Survive",
+      "type": "Action",
+      "cost": 4,
+      "copies": 2,
+      "metal_pair": [
+        "Pewter",
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "heal": 3
+        }
+      },
+      "secondary": {
+        "metal": "Pewter",
+        "extra_burns": 1,
+        "effects": {
+          "heal": 4
+        }
+      },
+      "card_number": 48,
+      "verified_from_image": true
+    },
+    {
+      "name": "Soldier",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "combat": 1
+        }
+      },
+      "secondary": null,
+      "ongoing": "defender",
+      "card_number": 50,
+      "verified_from_image": true
+    },
+    {
+      "name": "Pewterarm",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Pewter",
+        "effects": {
+          "combat": 2
+        }
+      },
+      "secondary": null,
+      "ongoing": "defender",
+      "card_number": 51,
+      "verified_from_image": true
+    },
+    {
+      "name": "Precise Shot",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Steel",
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "combat": 3,
+          "push": 1
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 2,
+        "effects": {
+          "gain_eliminated_card_to_hand": 1
+        }
+      },
+      "card_number": 52,
+      "verified_from_image": true
+    },
+    {
+      "name": "Assassinate",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Steel",
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "push": 1,
+          "combat": 3
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 1,
+        "effects": {
+          "kill_ally": 1
+        }
+      },
+      "card_number": 53,
+      "verified_from_image": true
+    },
+    {
+      "name": "Maelstrom",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Steel",
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "combat": 5,
+          "coin": 2
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 2,
+        "effects": {
+          "kill_all_opponent_allies": true,
+          "eliminate_all_market_cards": true
+        }
+      },
+      "card_number": 54,
+      "verified_from_image": true
+    },
+    {
+      "name": "Soar",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Steel",
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "push": 1
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 1,
+        "effects": {
+          "coin": 2,
+          "may_buy_eliminated_card": true
+        }
+      },
+      "card_number": 56,
+      "verified_from_image": true,
+      "savant": {
+        "mission": 1
+      }
+    },
+    {
+      "name": "Steelpush",
+      "type": "Action",
+      "cost": 3,
+      "copies": 2,
+      "metal_pair": [
+        "Steel",
+        "Iron"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "choice_of": [
+            "train:1",
+            "combat:3"
+          ]
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 1,
+        "effects": {
+          "combat": 1,
+          "mission": 2
+        }
+      },
+      "card_number": 58,
+      "verified_from_image": true
+    },
+    {
+      "name": "Mercenary",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "combat": 1
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 1,
+        "effects": {
+          "gain_eliminated_card_to_discard": 1
+        }
+      },
+      "card_number": 59,
+      "verified_from_image": true
+    },
+    {
+      "name": "Coinshot",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Steel"
+      ],
+      "primary": {
+        "metal": "Steel",
+        "effects": {
+          "combat": 2
+        }
+      },
+      "secondary": {
+        "metal": "Steel",
+        "extra_burns": 1,
+        "effects": {
+          "kill_ally": 1
+        }
+      },
+      "card_number": 60,
+      "verified_from_image": true
+    },
+    {
+      "name": "Lookout",
+      "type": "Action",
+      "cost": 4,
+      "copies": 1,
+      "metal_pair": [
+        "Tin",
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "mission": 2
+        }
+      },
+      "secondary": {
+        "metal": "Tin",
+        "extra_burns": 1,
+        "effects": {
+          "draw_per_highest_mission_track": 1
+        }
+      },
+      "card_number": 61,
+      "verified_from_image": true
+    },
+    {
+      "name": "Spy",
+      "type": "Action",
+      "cost": 5,
+      "copies": 1,
+      "metal_pair": [
+        "Tin",
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "mission": 2
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "sense": 3
+      },
+      "card_number": 62,
+      "verified_from_image": true
+    },
+    {
+      "name": "Hyperaware",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Tin",
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "mission": 3,
+          "draw": 1
+        }
+      },
+      "secondary": {
+        "metal": "Tin",
+        "extra_burns": 2,
+        "effects": {
+          "combat_per_highest_mission_track": 3
+        }
+      },
+      "card_number": 63,
+      "verified_from_image": true
+    },
+    {
+      "name": "Eavesdrop",
+      "type": "Action",
+      "cost": 4,
+      "copies": 2,
+      "metal_pair": [
+        "Tin",
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "advance_mission_track_if_lowest_all": 1
+        }
+      },
+      "secondary": null,
+      "off_turn": {
+        "sense": 2
+      },
+      "card_number": 65,
+      "verified_from_image": true,
+      "savant": {
+        "coin": 1
+      }
+    },
+    {
+      "name": "Crewleader",
+      "type": "Ally",
+      "cost": 6,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [],
+      "primary": null,
+      "ongoing": "draw_extra_card_on_hand_draw",
+      "card_number": 66,
+      "verified_from_image": true
+    },
+    {
+      "name": "Investigate",
+      "type": "Action",
+      "cost": 3,
+      "copies": 2,
+      "metal_pair": [
+        "Tin",
+        "Pewter"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "coin": 1,
+          "coin_per_lowest_mission_track": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 67,
+      "verified_from_image": true
+    },
+    {
+      "name": "House Lord",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "coin": 2
+        }
+      },
+      "secondary": {
+        "metal": "Tin",
+        "extra_burns": 1,
+        "effects": {
+          "draw": 1
+        }
+      },
+      "card_number": 68,
+      "verified_from_image": true
+    },
+    {
+      "name": "Tineye",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Tin"
+      ],
+      "primary": {
+        "metal": "Tin",
+        "effects": {
+          "mission": 1,
+          "coin": 2
+        }
+      },
+      "secondary": {
+        "metal": "Tin",
+        "extra_burns": 1,
+        "effects": {
+          "mission": 2
+        }
+      },
+      "card_number": 69,
+      "verified_from_image": true
+    },
+    {
+      "name": "Charm",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Zinc",
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "coin": 3
+        }
+      },
+      "secondary": {
+        "metal": "Zinc",
+        "extra_burns": 1,
+        "effects": {
+          "coin": 2
+        }
+      },
+      "savant": {
+        "coin": 2
+      },
+      "card_number": 70,
+      "verified_from_image": true
+    },
+    {
+      "name": "Intimidate",
+      "type": "Action",
+      "cost": 3,
+      "copies": 1,
+      "metal_pair": [
+        "Zinc",
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "coin": 3
+        }
+      },
+      "secondary": {
+        "metal": "Zinc",
+        "extra_burns": 1,
+        "effects": {
+          "coin": 1,
+          "draw": 1
+        }
+      },
+      "card_number": 71,
+      "verified_from_image": true
+    },
+    {
+      "name": "House War",
+      "type": "Action",
+      "cost": 6,
+      "copies": 1,
+      "metal_pair": [
+        "Zinc",
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "draw": 2,
+          "combat": 2
+        }
+      },
+      "secondary": {
+        "metal": "Zinc",
+        "extra_burns": 2,
+        "effects": {
+          "convert_all_combat_to_mission": true
+        }
+      },
+      "card_number": 72,
+      "verified_from_image": true
+    },
+    {
+      "name": "Enrage",
+      "type": "Action",
+      "cost": 2,
+      "copies": 2,
+      "metal_pair": [
+        "Zinc",
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "combat": 1,
+          "coin": 2,
+          "riot": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 74,
+      "verified_from_image": true
+    },
+    {
+      "name": "Inspire",
+      "type": "Action",
+      "cost": 3,
+      "copies": 2,
+      "metal_pair": [
+        "Zinc",
+        "Brass"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "coin": 3,
+          "riot": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 76,
+      "verified_from_image": true
+    },
+    {
+      "name": "Rebel",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "riot": 1
+        }
+      },
+      "secondary": null,
+      "card_number": 77,
+      "verified_from_image": true
+    },
+    {
+      "name": "Rioter",
+      "type": "Ally",
+      "cost": 5,
+      "copies": 1,
+      "defense": 3,
+      "metal_pair": [
+        "Zinc"
+      ],
+      "primary": {
+        "metal": "Zinc",
+        "effects": {
+          "coin": 3
+        }
+      },
+      "secondary": {
+        "metal": "Zinc",
+        "extra_burns": 1,
+        "effects": {
+          "combat": 2
+        }
+      },
+      "card_number": 78,
+      "verified_from_image": true
+    },
+    {
+      "name": "Noble",
+      "type": "Ally",
+      "cost": 3,
+      "copies": 1,
+      "defense": 2,
+      "metal_pair": [],
+      "primary": null,
+      "ongoing": "extra_metal_burn",
+      "card_number": 79,
+      "verified_from_image": true
+    },
+    {
+      "name": "Hazekillers",
+      "type": "Ally",
+      "cost": 4,
+      "copies": 2,
+      "defense": 3,
+      "metal_pair": [],
+      "primary": null,
+      "ongoing": "defender",
+      "card_number": 82,
+      "verified_from_image": true
+    }
+  ],
+  "copies_confirmed_x2": [
+    "Strike",
+    "Survive",
+    "Investigate",
+    "Eavesdrop",
+    "Hunt",
+    "Unveil",
+    "Coppercloud",
+    "Hide",
+    "Enrage",
+    "Inspire",
+    "Con",
+    "Deceive",
+    "Soar",
+    "Steelpush",
+    "Ironpull",
+    "Crash",
+    "Hazekillers"
+  ],
+  "_copies_correction_note": "IMPORTANTE: en el array 'cards' de arriba, revisa el campo 'copies' de Ironpull y Crash -- según la lista confirmada por el usuario, Ironpull es x2 y Crash es x2, no lo que pueda decir un valor residual. La lista 'copies_confirmed_x2' es la fuente de verdad definitiva (17 nombres); cualquier carta no listada ahí tiene copies=1."
+}

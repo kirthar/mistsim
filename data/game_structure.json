@@ -1,0 +1,107 @@
+{
+  "components": {
+    "character_cards": 4,
+    "starter_decks": {"count": 4, "cards_each": 10, "composition": "4 character-specific Training cards + 6 Funding cards"},
+    "market_cards": {"total": 82, "distinct_names": 65, "types": ["Action", "Ally"]},
+    "mission_cards": {"total_available": 8, "used_per_game": 3},
+    "lord_ruler_challenge_cards": 36,
+    "atium_tokens": 16,
+    "training_tracks_per_player": 8,
+    "health_dials_per_player": 1,
+    "metal_tokens_per_player": 8,
+    "boxing_tokens": 14,
+    "target_standee": 1
+  },
+  "setup_steps": [
+    "Give each player: random character card, Training track + tracking cube (color), set of 8 metals, 4 character-specific starting cards + 6 Funding cards shuffled as starting deck, health dial set to 36",
+    "If fewer than 4 players, remove extra components including unused starting/funding cards",
+    "Shuffle Market deck, reveal top 6 cards as 'the Market'",
+    "Place Boxing and Atium tokens near Market",
+    "Shuffle and reveal 3 random Mission cards; place a tracking cube per player on each",
+    "Choose first player. 2nd player (clockwise) gets +2 health, 3rd gets +4 health, 4th gets +4 health and 1 Boxing",
+    "If more than 2 players, last player (clockwise from first) gets the Target",
+    "Each player draws 5 cards as starting hand"
+  ],
+  "deckbuilding_rules": {
+    "hand_size": 5,
+    "zones": ["hand", "deck (facedown)", "discard (faceup)", "in_play"],
+    "card_visibility": "Players may look at own hand and discard anytime, never at own deck",
+    "play_order": "Any order chosen by the active player",
+    "acquired_cards_go_to": "discard pile immediately, unless stated otherwise",
+    "end_of_turn_cleanup": "All in-play cards except Allies move to discard; unplayed hand cards also discard",
+    "deck_reshuffle": "When a draw is needed and deck is empty, shuffle discard pile into new deck",
+    "eliminated_cards": "Removed from game into a shared Eliminated pile, visible to all players"
+  },
+  "market_rules": {
+    "buy_anytime_during_turn": true,
+    "replace_immediately_from_market_deck": true,
+    "unlimited_buys_per_turn": "limited only by available coin",
+    "coin_does_not_carry_over": true,
+    "boxing": {"buy_cost": 2, "sell_value": 1, "unlimited_supply": true}
+  },
+  "combat_rules": {
+    "starting_health_range": "36-40",
+    "max_health": 40,
+    "damage_usable_only": "at end of turn, split freely between Allies and players",
+    "ally_death": "requires damage >= Defense value in one hit; no partial damage; moves to owner discard on death",
+    "defender_ally_rule": "Damage cannot target the player or non-Defender Allies while a Defender Ally is alive; defender must be killed first (must have enough combat to kill it or cannot use damage against it)",
+    "two_player_mode": "At end of turn, may direct all combat at opponent and their Allies (optional)",
+    "three_four_player_mode": {
+      "target_mechanic": "Last player (clockwise from first) starts holding the Target",
+      "target_damage_rule": "After attacking any Allies, remaining damage from your turn MUST go to whoever holds the Target",
+      "target_passing": "Only after a Target-holder takes damage from another player; they may then pass Target to anyone; passing happens only after all damage for the turn is used",
+      "player_elimination": "If Target-holder is eliminated, attacker may move Target to any remaining player, remaining damage carries over; if only 2 players would remain, Target is removed from game"
+    },
+    "healing": {"symbol_effect": "raise health dial, cannot exceed max 40"}
+  },
+  "turn_structure": [
+    "1. Move one space right on Training track",
+    "2. Any order, any number of times: play cards from hand; burn/flare metals; use cards as metal; discard to refresh flared metal; activate Ally/character abilities; advance Mission tracks; buy cards/Boxings from Market",
+    "3. Attack Allies",
+    "4. Attack players (reduce health) - Target may move after this step if Target holder took damage",
+    "5. Discard all in-play cards (except Allies) and remaining hand",
+    "6. Draw 5 new cards"
+  ],
+  "win_conditions": [
+    "Reach the top of all three active Mission tracks first (instant win)",
+    "Be the last player remaining (all others eliminated)",
+    "Play 4 total Atium on the card 'Confrontation' (primary ability + secondary ability requiring 3 more Atium)"
+  ],
+  "mission_track_rules": {
+    "points_to_reach_top": 12,
+    "starting_area_not_on_track": true,
+    "multiple_mission_points_same_turn": "may be split across multiple tracks or spent all on one",
+    "cube_ties_rule": "A single cube on the track image area is not 'on the track'; with only 1 cube actually on track it counts as highest but not lowest. With 3+ cubes on track, ties at top/bottom count as highest/lowest respectively",
+    "first_to_finish_track": "permanently counts as highest on that track thereafter",
+    "rewards": "each Mission has mid-track rewards (one-time), first-player-only bonus rewards at each reward point, and a top reward (one-time or permanent) plus an extra one-time top reward for whoever reaches it first"
+  },
+  "solo_coop_mode": {
+    "lord_ruler_starting_health": 48,
+    "lord_ruler_deck_size": 36,
+    "dominance_starting_value": 1,
+    "dominance_max_value": 6,
+    "target_standee_used": false,
+    "starting_bonuses_given": false,
+    "turn_flow": "Each player takes a normal turn (never attacking other players/their Allies), then draws and resolves the top card of the Lord Ruler deck (Adversary or Edict)",
+    "adversary_cards": {
+      "shields_per_card": "1 to 3",
+      "shield_destroy_rule": "damage >= shield value destroys it; shields destroyed left to right only; X shield value = current Dominance value; multiple shields can be destroyed same turn if enough damage; any player can attack any Adversary regardless of who it's assigned to",
+      "effect_types": "permanent negative effect OR end-of-turn negative effect (resolves before drawing new hand) for the player the Adversary is assigned to"
+    },
+    "edict_cards": {
+      "structure": "up to 4 sequential effects: Dominance increase (1-2 steps, sometimes player-count conditional), additional effect (usually negative), Lord Ruler healing (10 HP per uncompleted Mission, max 48), market clearing (Lord Ruler eliminates 2 specific market cards, instantly replaced)",
+      "mission_completion_definition": "only ONE player needs to have reached a Mission's top reward for it to count as completed"
+    },
+    "end_conditions": [
+      "Lord Ruler deck runs out -> players lose",
+      "All players eliminated by damage -> players lose",
+      "Lord Ruler reaches 0 health -> players win",
+      "A player plays 4 Atium on Confrontation -> players win"
+    ],
+    "special_rulings": {
+      "sense_in_coop": "SENSE abilities have NO effect on the Lord Ruler",
+      "solo_track_position": "in solo, a player is 'lowest' on a track only if started but hasn't reached first reward; 'highest' only after passing the highest reward before the final one; gets first-player reward for every reward tier",
+      "collective_damage": "shared among all players; may be distributed however players choose; if 1 player, they take it all"
+    }
+  }
+}

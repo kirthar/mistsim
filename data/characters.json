@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "note": "Los personajes comparten estructura: 4 cartas de Entrenamiento (una por metal) + 6 de Financiación como mazo inicial, y dial de salud 36-40. La única diferencia mecánica es la habilidad de Nivel I (metal insignia); los Niveles II y III son idénticos en todos.",
+    "level_1_source": "Facilitadas por el propietario del juego a partir de las cartas físicas (2026-08). Sustituyen a la transcripción parcial previa, que daba a Marsh 1 punto de misión en vez de 2."
+  },
+  "characters": [
+    {
+      "id": "vin",
+      "name": "Vin",
+      "title": "The Warrior",
+      "signature_metal": "Pewter",
+      "level_1_ability": {"metal": "Pewter", "effects": {"combat": 1, "heal": 1, "coin": 1}},
+      "promo": false
+    },
+    {
+      "id": "kelsier",
+      "name": "Kelsier",
+      "title": "The Survivor",
+      "signature_metal": "Steel",
+      "level_1_ability": {"metal": "Steel", "effects": {"combat": 2}},
+      "promo": false
+    },
+    {
+      "id": "shan",
+      "name": "Shan",
+      "title": "The Noble",
+      "signature_metal": "Zinc",
+      "level_1_ability": {"metal": "Zinc", "effects": {"coin": 2}},
+      "promo": false
+    },
+    {
+      "id": "marsh",
+      "name": "Marsh",
+      "title": "The Spy",
+      "signature_metal": "Bronze",
+      "level_1_ability": {"metal": "Bronze", "effects": {"mission": 2}},
+      "promo": false
+    },
+    {
+      "id": "vin_brass",
+      "name": "Vin",
+      "title": "Promocional",
+      "signature_metal": "Brass",
+      "level_1_ability": {"metal": "Brass", "effects": {"soothe": 1}},
+      "promo": true
+    }
+  ],
+  "shared_abilities": {
+    "level_1": "Una vez por turno, al quemar el metal insignia, activa el efecto del personaje. Sólo una vez por turno por muchas veces que se queme ese metal.",
+    "level_2": "Una vez por turno, al comprar una carta de Acción del Mercado, puedes eliminarla de inmediato y resolver su habilidad primaria sin quemar metal.",
+    "atium_trigger": "Cuando el personaje quema Atium por cualquier motivo (como Atium o como metal sustituido), gana un efecto extra. El efecto concreto por personaje no está transcrito; sólo la mecánica está confirmada."
+  },
+  "health": {
+    "base": 36,
+    "max": 40,
+    "turn_order_bonus": {"2": 2, "3": 4, "4": 4},
+    "fourth_player_extra_boxing": 1
+  },
+  "training_track": {
+    "total_steps": 8,
+    "advance_trigger": "Un paso automático al inicio de cada turno, más cualquier icono de Entrenamiento de carta o Misión.",
+    "reward_types": [
+      "quema de metal adicional (hasta 4 al final de la pista)",
+      "desbloquear nivel de habilidad de personaje (I, II, III)",
+      "ganar 1 ficha de Atium",
+      "Atium continuo: ganas Atium cada vez que avanzas en una pista de Misión (último paso)"
+    ]
+  }
+}
