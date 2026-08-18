@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass, field
 
 from mistsim.domain.cards import CardInstance
-from mistsim.domain.metals import MetalTokens
+from mistsim.domain.metals import Metal, MetalTokens
 
 MAX_HEALTH = 40
 HAND_SIZE = 5
@@ -57,6 +57,14 @@ class Player:
 
     #: Efectos de un solo uso por turno ya gastados (habilidad de personaje, nivel II…).
     used_once_per_turn: set[str] = field(default_factory=set)
+
+    #: Veces que se ha activado cada metal este turno, contando fichas quemadas,
+    #: fichas flareadas y cartas jugadas de lado. Es lo que decide si una habilidad
+    #: secundaria "+N METAL" ya tiene sus quemas, y qué Aliados pueden activarse.
+    metal_burn_counts: dict[Metal, int] = field(default_factory=dict)
+
+    #: Efectos permanentes ganados de recompensas de Misión, p.ej. {"coin": 2}.
+    permanents: dict[str, int] = field(default_factory=dict)
 
     # ---- movimiento de cartas -------------------------------------------------
 
@@ -110,9 +118,19 @@ class Player:
         self.training = min(TRAINING_STEPS, self.training + steps)
         return self.training - before
 
+    @property
+    def metals_active_this_turn(self) -> set[Metal]:
+        return {m for m, n in self.metal_burn_counts.items() if n > 0}
+
+    def note_metal(self, metal: Metal) -> int:
+        """Registra una activación de ese metal y devuelve el total del turno."""
+        self.metal_burn_counts[metal] = self.metal_burn_counts.get(metal, 0) + 1
+        return self.metal_burn_counts[metal]
+
     def start_turn(self) -> None:
         self.tokens.start_turn()
         self.resources.reset()
         self.used_once_per_turn.clear()
+        self.metal_burn_counts.clear()
         for inst in self.allies:
             inst.reset_turn()

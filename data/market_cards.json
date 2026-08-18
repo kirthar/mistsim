@@ -654,11 +654,11 @@
       "primary": {
         "metal": "Iron",
         "effects": {
-          "combat_or_coin_choice": 2
+          "combat_or_coin_choice": 2,
+          "refresh_any_flared_metal": true
         }
       },
       "secondary": null,
-      "refresh_any_flared_metal": true,
       "card_number": 34,
       "verified_from_image": true,
       "savant": {
