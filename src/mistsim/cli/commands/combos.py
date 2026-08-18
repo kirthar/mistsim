@@ -78,6 +78,7 @@ def cmd_combos(args: argparse.Namespace) -> int:
                                       min_cell=args.min_cell, costs=content_costs)
         rules.annotate(triples)
     checks = rules.check_rules(pairs, min_support=args.min_support)
+    patterns = mining.pattern_summary(pairs, rules.mechanical_groups())
 
     replication = None
     if not args.no_replication:
@@ -90,19 +91,20 @@ def cmd_combos(args: argparse.Namespace) -> int:
     text = report.render(index, pairs, triples, checks, corpus_path=str(path),
                          size_control=not args.no_size_control, top=args.top,
                          min_support=args.min_support, replication=replication,
-                         computed_triples=not args.no_triples, tuning=trace)
+                         computed_triples=not args.no_triples, tuning=trace,
+                         patterns=patterns)
     print(text)
 
     if args.json:
         Path(args.json).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.json).write_text(json.dumps(_as_json(index, pairs, triples, checks, replication),
-                                              ensure_ascii=False, indent=2),
-                                   encoding="utf-8")
+        volcado = _as_json(index, pairs, triples, checks, replication, patterns)
+        Path(args.json).write_text(
+            json.dumps(volcado, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nRanking completo en {args.json}", file=sys.stderr)
     return 0
 
 
-def _as_json(index, pairs, triples, checks, rep=None) -> dict:
+def _as_json(index, pairs, triples, checks, rep=None, patterns=()) -> dict:
     """Volcado completo, para el visor web y para rehacer gráficas sin re-minar."""
     def estimate(e):
         return {"lift": e.lift, "ci_low": e.ci_low, "ci_high": e.ci_high,
@@ -127,6 +129,9 @@ def _as_json(index, pairs, triples, checks, rep=None) -> dict:
                      **estimate(t.synergy)} for t in triples],
         "replication": ({"checked": rep.checked, "same_direction": rep.same_direction,
                          "rank_agreement": rep.rank_agreement} if rep else None),
+        "patterns": [{"name": p.name, "pairs": p.pairs, "median_lift": p.median_lift,
+                      "fraction_above": p.fraction_above, "sign_p": p.sign_p}
+                     for p in patterns],
         "rule_checks": [{"rule": c.rule, "measured": c.measured, "confirmed": c.confirmed,
                          "contradicted": c.contradicted, "median_lift": c.median_lift,
                          "best": list(c.best) if c.best else None} for c in checks],

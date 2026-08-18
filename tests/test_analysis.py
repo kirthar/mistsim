@@ -772,3 +772,57 @@ def test_el_autoajuste_sube_por_la_escalera_hasta_centrar_la_mediana():
     assert not escalera[0][1].well_centred
     assert abs(escalera[-1][1].median_lift - 1.0) <= 0.02
     assert elegido == escalera[-1][0]
+
+
+def test_el_resumen_por_grupos_detecta_un_patron_que_ningun_par_suelto_probaria():
+    """Efectos pequeños repartidos entre muchos pares: invisibles uno a uno, claros juntos.
+
+    Se fabrica una población en la que TODOS los pares de "aliados" (nombres que
+    empiezan por V) se estorban un poco, tan poco que ningún par suelto llegaría a ser
+    concluyente. El test de signos sobre el grupo sí lo ve.
+    """
+    rng = random.Random(61)
+    aliados = [f"V{i}" for i in range(9)]
+    acciones = [f"W{i}" for i in range(9)]
+    rows = []
+    for _ in range(24000):
+        mazo = {c for c in aliados + acciones if rng.random() < 0.35}
+        estorbo = sum(1 for a in aliados for b in aliados
+                      if a < b and a in mazo and b in mazo)
+        p = 0.30 * (0.90 ** estorbo)
+        rows.append(obs(mazo, rng.random() < p))
+    index = mining.build_index(rows, size_control=True, size_buckets=12)
+    pairs = mining.mine_pairs(index, min_support=30, min_cell=5)
+
+    grupos = {
+        "aliado+aliado": lambda p: p.cards[0][0] == "V" and p.cards[1][0] == "V",
+        "resto": lambda p: not (p.cards[0][0] == "V" and p.cards[1][0] == "V"),
+    }
+    resumen = {p.name: p for p in mining.pattern_summary(pairs, grupos)}
+    assert resumen["aliado+aliado"].median_lift < 1.0
+    assert resumen["aliado+aliado"].fraction_above < 0.35
+    assert resumen["aliado+aliado"].sign_p < 0.05
+    assert resumen["resto"].median_lift == pytest.approx(1.0, abs=0.05)
+    assert resumen["resto"].sign_p > 0.05
+
+
+def test_los_grupos_mecanicos_parten_los_pares_sin_dejarse_ninguno(content):
+    grupos = rules.mechanical_groups(content)
+    by_name = rules.cards_by_name(content)
+    nombres = sorted(by_name)[:12]
+
+    class Falso:
+        def __init__(self, cards):
+            self.cards = cards
+            self.rules = ()
+            self.synergy = stats.Estimate(1.0, 0.9, 1.1, 0.0, 0.01, 2, 100)
+
+    pares = [Falso((a, b)) for i, a in enumerate(nombres) for b in nombres[i + 1:]]
+    # Aliado/Acción y comparten/no comparten metal son particiones: cada par cae en una.
+    for izquierda, derecha in (("dos Aliados", "dos Acciones"),
+                               ("comparten metal", "metales disjuntos")):
+        assert all(not (grupos[izquierda](p) and grupos[derecha](p)) for p in pares)
+    for par in pares:
+        assert (grupos["dos Aliados"](par) or grupos["dos Acciones"](par)
+                or grupos["un Aliado y una Acción"](par))
+        assert grupos["comparten metal"](par) != grupos["metales disjuntos"](par)

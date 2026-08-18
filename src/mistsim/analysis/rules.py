@@ -15,6 +15,7 @@ Sirve para dos cosas, y la segunda es la interesante:
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from mistsim.agents import synergy
@@ -112,3 +113,59 @@ def check_rules(pairs, content: Content | None = None,
 def undiscovered(pairs, top: int = 25) -> list:
     """Los mejores pares medidos que **ninguna** regla escrita a mano predice."""
     return [p for p in pairs if not p.rules][:top]
+
+
+# --- grupos mecánicos de pares -----------------------------------------------
+
+
+def mechanical_groups(content: Content | None = None
+                      ) -> dict[str, Callable[[object], bool]]:
+    """Agrupaciones de pares con sentido mecánico, para el resumen agregado.
+
+    No son hipótesis nuevas: son las divisiones que cualquiera haría mirando las cartas
+    —dos Aliados, dos cartas del mismo metal, una barata y una cara— y que por tener
+    cientos de pares dentro sí tienen potencia estadística, al revés que un par suelto.
+    """
+    by_name = cards_by_name(content)
+
+    def pair_of(result) -> tuple[Card, Card] | None:
+        a, b = by_name.get(result.cards[0]), by_name.get(result.cards[1])
+        return (a, b) if a and b else None
+
+    def both(test: Callable[[Card], bool]) -> Callable[[object], bool]:
+        def check(result) -> bool:
+            cards = pair_of(result)
+            return bool(cards) and test(cards[0]) and test(cards[1])
+        return check
+
+    def one_each(test: Callable[[Card], bool]) -> Callable[[object], bool]:
+        def check(result) -> bool:
+            cards = pair_of(result)
+            return bool(cards) and (test(cards[0]) != test(cards[1]))
+        return check
+
+    def shares_metal(result) -> bool:
+        cards = pair_of(result)
+        return bool(cards) and bool(set(cards[0].metal_pair) & set(cards[1].metal_pair))
+
+    def disjoint_metal(result) -> bool:
+        cards = pair_of(result)
+        return bool(cards) and not (set(cards[0].metal_pair) & set(cards[1].metal_pair))
+
+    def predicted(result) -> bool:
+        return bool(getattr(result, "rules", ()))
+
+    def not_predicted(result) -> bool:
+        return not getattr(result, "rules", ())
+
+    return {
+        "dos Aliados": both(lambda c: c.is_ally),
+        "un Aliado y una Acción": one_each(lambda c: c.is_ally),
+        "dos Acciones": both(lambda c: not c.is_ally),
+        "comparten metal": shares_metal,
+        "metales disjuntos": disjoint_metal,
+        "dos cartas caras (coste ≥ 5)": both(lambda c: c.cost >= 5),
+        "dos cartas baratas (coste ≤ 3)": both(lambda c: c.cost <= 3),
+        "alguna regla escrita a mano lo predice": predicted,
+        "ninguna regla lo predice": not_predicted,
+    }

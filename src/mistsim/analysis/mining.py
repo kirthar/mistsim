@@ -32,7 +32,7 @@ import bisect
 import collections
 import itertools
 import math
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
 from mistsim.analysis import stats
@@ -565,3 +565,52 @@ def tune_size_buckets(observations: Sequence[Observation], *,
         if trace:
             chosen = min(trace, key=lambda item: abs(item[1].median_lift - 1.0))[0]
     return chosen, trace
+
+
+# --- patrones agregados ------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Pattern:
+    """Un grupo de pares mirado en conjunto.
+
+    Un par suelto casi nunca tiene potencia; un grupo de 300 pares que comparten una
+    propiedad mecánica, sí. "¿Dos Aliados juntos rinden menos que por separado?" se
+    responde con mucha más certeza que "¿Soother y Coinshot se estorban?".
+    """
+
+    name: str
+    pairs: int
+    median_lift: float
+    #: Proporción de pares del grupo con lift > 1.
+    fraction_above: float
+    #: p bilateral del test de signos contra "la mitad por encima y la mitad por debajo".
+    sign_p: float
+
+
+def pattern_summary(pairs: Sequence[PairResult],
+                    groups: dict[str, Callable[[PairResult], bool]]) -> list[Pattern]:
+    """Resume el ranking por grupos de pares definidos mecánicamente.
+
+    El test es de signos y no de medias: los lifts tienen cola larga y una media se la
+    lleva un par con soporte 30. Contar cuántos caen a cada lado del 1 es robusto y es
+    justo la pregunta ("¿este tipo de pareja tiende a ayudar o a estorbar?").
+
+    Los pares de un grupo NO son independientes entre sí —comparten cartas—, así que la
+    p es orientativa y siempre optimista. Con grupos de cientos de pares y proporciones
+    del 60/40 la conclusión aguanta igualmente; con 55/45 no.
+    """
+    out = []
+    for name, belongs in groups.items():
+        selected = [p for p in pairs if p.synergy.estimated and belongs(p)]
+        if not selected:
+            continue
+        lifts = sorted(p.synergy.lift for p in selected)
+        above = sum(1 for lift in lifts if lift > 1.0)
+        n = len(lifts)
+        z = abs(above - n / 2) / math.sqrt(n / 4) if n else 0.0
+        out.append(Pattern(name=name, pairs=n, median_lift=lifts[n // 2],
+                           fraction_above=above / n,
+                           sign_p=math.erfc(z / math.sqrt(2))))
+    out.sort(key=lambda p: -p.pairs)
+    return out

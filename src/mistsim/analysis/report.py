@@ -206,7 +206,8 @@ def pairs_section(pairs: Sequence[PairResult], top: int, min_support: int) -> li
         "PARES — lift de interacción estratificado",
         RULE,
         "Lift = cuánto más aporta B a quien YA tiene A que a quien no. 1,00 = ninguna",
-        "sinergia. ✔ = robusto (soporte suficiente, IC excluye el 1, IC no absurdo).",
+        "sinergia. ✔ = robusto: soporte suficiente, IC fuera del 1, IC utilizable y",
+        "q ≤ 0,05 tras Benjamini-Hochberg.",
         "· = significativo pero con intervalo demasiado ancho para apostar.",
         "",
         f"SINERGIAS ROBUSTAS ({len(robust)})",
@@ -267,6 +268,31 @@ def rules_section(checks: Sequence[RuleCheck], pairs: Sequence[PairResult]) -> l
     fresh = [p for p in undiscovered(pairs, top=200) if p.synergy.robust()][:12]
     _rows(lines, fresh, _pair_row, "  (ninguno robusto; ver la lista de no concluyentes)")
     lines.append("")
+    return lines
+
+
+def patterns_section(patterns) -> list[str]:
+    """Los grupos mecánicos de pares, que sí tienen potencia."""
+    lines = [
+        RULE,
+        "PATRONES AGREGADOS — donde sí hay potencia estadística",
+        RULE,
+        "Un par suelto casi nunca llega a ser concluyente. Un grupo de cientos de pares",
+        "que comparten una propiedad mecánica, sí. Se cuenta cuántos caen a cada lado del",
+        "1 (test de signos): los lifts tienen cola larga y una media se la lleva un par",
+        "con soporte 30.",
+        "",
+        f"{'grupo':<42}{'pares':>7}{'mediana':>9}{'>1':>8}{'p':>9}",
+    ]
+    for pattern in patterns:
+        marca = "✔" if pattern.sign_p < 0.01 else (" " if pattern.sign_p > 0.05 else "·")
+        lines.append(f"{marca}{pattern.name:<41}{pattern.pairs:>7}"
+                     f"{pattern.median_lift:>9.3f}{100 * pattern.fraction_above:>7.0f}%"
+                     f"{pattern.sign_p:>9.3f}")
+    lines += ["", "Los pares de un grupo comparten cartas y NO son independientes, así que "
+              "la p",
+              "es orientativa y siempre optimista. Con 60/40 sobre cientos de pares la",
+              "conclusión aguanta; con 55/45 no.", ""]
     return lines
 
 
@@ -399,7 +425,7 @@ def explain_section(index: Index, a: str, b: str, min_cell: int) -> str:
 def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleResult],
            checks: Sequence[RuleCheck], *, corpus_path: str, size_control: bool,
            top: int = 25, min_support: int = 30, replication=None,
-           computed_triples: bool = True, tuning=()) -> str:
+           computed_triples: bool = True, tuning=(), patterns=()) -> str:
     lines: list[str] = []
     lines += header(index, corpus_path, size_control)
     lines += homebrew_warning()
@@ -409,6 +435,8 @@ def render(index: Index, pairs: Sequence[PairResult], triples: Sequence[TripleRe
     if computed_triples:
         lines += triples_section(triples, top)
     lines += rules_section(checks, pairs)
+    if patterns:
+        lines += patterns_section(patterns)
     if replication is not None:
         lines += replication_section(replication)
     lines += verdict(pairs, triples, index)
