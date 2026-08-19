@@ -25,6 +25,13 @@ class Chooser(Protocol):
     def choose_amount(self, maximum: int, context: str) -> int:
         """Elige cuánto usar de un efecto con tope (p.ej. cuántas cartas mover con Pull)."""
 
+    def choose_reaction(self, state, options: list, context):
+        """Elige una carta de la mano para jugar como reacción fuera de turno.
+
+        Devuelve None para no reaccionar, que es lo correcto casi siempre: una reacción
+        gasta una carta que podrías jugar en tu turno.
+        """
+
 
 class GreedyChooser:
     """Elección por defecto, determinista: la primera opción y el máximo permitido.
@@ -43,3 +50,7 @@ class GreedyChooser:
 
     def choose_amount(self, maximum: int, context: str) -> int:
         return maximum
+
+    def choose_reaction(self, state, options: list, context):
+        """No reacciona. Los agentes de verdad lo sobrescriben."""
+        return None

@@ -12,7 +12,7 @@
   ],
   "keyword_definitions": {
     "Defender": "Damage cannot target the player or their non-Defender Allies while a Defender Ally is in play. Defenders must be killed first.",
-    "Sense": "Stops other players from advancing on a Mission Track for the rest of that turn, even if they gain more Mission points afterward. NO EFFECT on the Lord Ruler in Solo/Co-op mode.",
+    "Sense": "Play off turn to reduce an opponent's Mission points by N. The manual worded this as 'stops other players from advancing on a Mission Track for the rest of that turn', but the printed cards (Spy SENSE 3, Eavesdrop SENSE 2) say otherwise and the card wins -- see RULES_DECISIONS.md 12. NO EFFECT on the Lord Ruler in Solo/Co-op mode.",
     "Seek": "Use the top (primary) ability ONLY of an Action card (not Ally) in the market, up to the listed cost limit. Never reaches the secondary/+metal ability of the target card.",
     "Cloud": "Either reduces incoming damage to a player, or protects an Ally from being eliminated (attacking combat is still spent either way).",
     "Riot": "Activate the top ability of one of your Allies that hasn't been activated via Riot this turn (per current errata; does not block a separate normal burn-activation of that same Ally).",

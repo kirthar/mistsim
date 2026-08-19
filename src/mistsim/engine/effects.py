@@ -172,16 +172,32 @@ def _soothe(ctx: EffectContext, value: int) -> None:
 
 @effect("sense")
 def _sense(ctx: EffectContext, value: int) -> None:
-    """Tin: impide a los rivales avanzar en una pista el resto del turno.
+    """Tin: recorta los puntos de Misión que un rival tiene acumulados.
+
+    El manual describe Sense como "impide a los demás avanzar en una pista el resto del
+    turno"; las dos cartas que lo llevan dicen otra cosa, y manda la carta:
+
+        Spy        SENSE 3   "Play off turn to reduce an opponent's [misión] by 3."
+        Eavesdrop  SENSE 2   "Play off turn to reduce an opponent's [misión] by 2."
+
+    Ninguna de las dos lleva Sense en su primaria ni en su secundaria, así que la vía
+    real es la ventana de reacción (`engine.reactions`). Este resolutor existe para que
+    la clave no sea un no-op silencioso si algún día aparece en una habilidad normal.
 
     No hace nada contra el Lord Ruler (FAQ).
     """
     if ctx.state.lord_ruler and not ctx.state.config.sense_affects_lord_ruler:
         ctx.log.emit("sense-noop", ctx.player.id, reason="lord-ruler", source=ctx.source)
-    for track in ctx.state.tracks:
-        for opponent in ctx.state.opponents(ctx.player.id):
-            track.sensed.add(opponent.id)
-    ctx.log.emit("sense", ctx.player.id, value=value, source=ctx.source)
+        return
+    targets = [p for p in ctx.state.opponents(ctx.player.id) if p.resources.mission > 0]
+    if not targets:
+        ctx.log.emit("sense-noop", ctx.player.id, reason="sin-puntos", source=ctx.source)
+        return
+    victim = ctx.state.player(
+        ctx.chooser.choose_player([p.id for p in targets], f"sense ({ctx.source})"))
+    lost = min(value, victim.resources.mission)
+    victim.resources.mission -= lost
+    ctx.log.emit("sense", ctx.player.id, value=lost, victim=victim.id, source=ctx.source)
 
 
 def unimplemented(ctx: EffectContext, key: str) -> None:
@@ -344,7 +360,7 @@ def _advance_if_lowest(ctx: EffectContext, value: int) -> None:
     """Eavesdrop: sube en cada Misión en la que seas el más bajo."""
     ids = ctx.state.alive_ids()
     for track in ctx.state.tracks:
-        if track.is_lowest(ctx.player.id, ids) and ctx.player.id not in track.sensed:
+        if track.is_lowest(ctx.player.id, ids):
             track.positions[ctx.player.id] = track.position_of(ctx.player.id) + value
             ctx.log.emit("mission-advance", ctx.player.id, track=track.mission.name,
                          to=track.positions[ctx.player.id], source=ctx.source)

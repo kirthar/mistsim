@@ -74,7 +74,7 @@ def test_clone_matches_deepcopy_field_by_field(state):
     player.allies.append(player.hand.pop())
     state.tracks[0].positions[0] = 4
     state.tracks[0].claimed.add((0, 2))
-    state.tracks[0].sensed.add(1)
+    state.tracks[0].first_claimed.add(2)
     state.eliminated.append(player.deck.pop())
 
     manual, generic = state.clone(), copy.deepcopy(state)
@@ -87,7 +87,7 @@ def test_clone_matches_deepcopy_field_by_field(state):
             "market": ([c.uid for c in st.market.row], [c.uid for c in st.market.deck]),
             "eliminated": [c.uid for c in st.eliminated],
             "tracks": [(t.mission.name, dict(t.positions), sorted(t.claimed),
-                        sorted(t.first_claimed), t.finisher, sorted(t.sensed))
+                        sorted(t.first_claimed), t.finisher)
                        for t in st.tracks],
             "players": [
                 (p.id, p.health, p.boxings, p.atium, p.training, p.eliminated,

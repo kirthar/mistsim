@@ -74,8 +74,10 @@ class SolverAgent(UtilityAgent):
         self._turn_key: tuple[int, int] | None = None
         self._queue: list[Action] = []
         self._fallback = False
+        self._replanned = False
         #: Contadores para poder decir en el informe cuánto se usó de verdad el plan.
-        self.stats = {"turnos": 0, "acciones": 0, "respaldos": 0, "nodos": 0}
+        self.stats = {"turnos": 0, "acciones": 0, "respaldos": 0, "replanes": 0,
+                      "nodos": 0}
 
     # --- elección de acción --------------------------------------------------
 
@@ -83,6 +85,7 @@ class SolverAgent(UtilityAgent):
         key = (state.turn, state.active)
         if key != self._turn_key:
             self._turn_key = key
+            self._replanned = False
             self._plan_turn(state)
 
         legal = {action_id(a) for a in actions}
@@ -92,11 +95,18 @@ class SolverAgent(UtilityAgent):
             if real is not None and action_id(real) in legal:
                 self.stats["acciones"] += 1
                 return real
-            # El estado se ha desviado del que se buscó: el plan deja de valer y el
-            # resto del turno lo decide la heurística. Pasa poco, pero si pasara en
-            # silencio el agente jugaría acciones sueltas de un plan roto.
-            self.stats["respaldos"] += 1
+            # El estado se ha desviado del que se buscó, y hay una causa legítima: una
+            # reacción fuera de turno. Un Sense rival puede vaciar los puntos de Misión
+            # a mitad de turno y tumbar la cola entera del plan. Volver a buscar desde
+            # el estado real juega mejor que caer a la heurística, así que se
+            # replanifica una vez por turno; a la segunda desviación, ya sí, respaldo.
             self._queue.clear()
+            if not self._replanned:
+                self._replanned = True
+                self.stats["replanes"] += 1
+                self._search(state)
+                continue
+            self.stats["respaldos"] += 1
             self._fallback = True
 
         if self._fallback:
@@ -106,6 +116,9 @@ class SolverAgent(UtilityAgent):
     def _plan_turn(self, state: GameState) -> None:
         self.stats["turnos"] += 1
         self._fallback = False
+        self._search(state)
+
+    def _search(self, state: GameState) -> None:
         plan = self.plan(state)
         self._queue = list(plan.actions)
         self.stats["nodos"] += plan.explored

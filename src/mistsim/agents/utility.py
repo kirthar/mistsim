@@ -13,9 +13,11 @@ import random
 from mistsim.agents.profile import StrategyProfile
 from mistsim.agents.tags import Tag, tags_for
 from mistsim.domain.cards import Card, CardInstance
+from mistsim.domain.missions import TRACK_LENGTH
 from mistsim.domain.state import GameState
 from mistsim.engine.actions import Action, ActionKind
 from mistsim.engine.game import Agent
+from mistsim.engine.reactions import Trigger, contribution
 
 #: Prioridad de fase. Jugar y activar antes de comprar, porque las monedas salen de
 #: activar; y gastar la misión al final, cuando ya no puede convertirse en combate.
@@ -42,6 +44,13 @@ PHASE = {
     ActionKind.ADVANCE_MISSION: 20,
     ActionKind.END_TURN: 0,
 }
+
+
+#: Lo que cuesta reaccionar, medido en "un hueco de mano". Una reacción tira la carta
+#: al descarte sin llegar a jugarla, y ese coste no se lee en su valor de compra: las
+#: seis cartas de fuera de turno tienen el texto entero en `off_turn`, así que el
+#: valuador las puntúa casi a cero. Sin este suelo la política reacciona siempre.
+REACTION_CARD_COST = 3.0
 
 
 class UtilityAgent(Agent):
@@ -251,6 +260,99 @@ class UtilityAgent(Agent):
 
     def choose_amount(self, maximum: int, context: str) -> int:
         return maximum
+
+    # --- reacciones fuera de turno -------------------------------------------
+
+    def choose_reaction(self, state: GameState, options: list, context):
+        """Decide si gastar una carta de la mano durante el turno de otro.
+
+        El listón tiene que ser alto: la carta se va al descarte sin llegar a jugarse,
+        así que reaccionar cuesta un hueco de mano entero. Sólo compensa cuando lo que
+        se evita vale más que jugarla en tu turno — que es casi nunca, salvo si el golpe
+        es letal o el rival está a punto de coronar una Misión.
+        """
+        best, best_net = None, 0.0
+        for inst in options:
+            net = self._reaction_gain(state, inst, context) - self._reaction_cost(inst)
+            if net > best_net:
+                best, best_net = inst, net
+        return best
+
+    def _reaction_cost(self, inst) -> float:
+        """Lo que se pierde por gastar esta carta fuera de turno.
+
+        NO es su valor de compra. `card_value` mide cuánto quieres TENER la carta, y en
+        estas seis ese valor viene precisamente del texto de fuera de turno: cobrárselo
+        como coste sería cobrar dos veces por lo mismo, y con `muro-defender` hacía que
+        Hide nunca salvara a nadie. Lo que de verdad se pierde es el hueco de mano más
+        lo que la carta habría hecho en tu propio turno.
+        """
+        card = getattr(inst, "card", inst)
+        on_turn = 0.0
+        for ability in (card.primary, card.secondary):
+            if ability is not None:
+                on_turn += self._effects_value(ability.effects)
+        return REACTION_CARD_COST + max(0.0, on_turn)
+
+    def _reaction_gain(self, state: GameState, inst, context) -> float:
+        trigger = context.trigger
+        gained = contribution(inst, trigger)
+        if trigger is Trigger.ALLY_DOOMED:
+            return self._save_ally_gain(state, context)
+        if trigger is Trigger.INCOMING_DAMAGE:
+            return self._prevent_damage_gain(state, context, gained)
+        if trigger is Trigger.MISSION_SPENDING:
+            return self._deny_mission_gain(state, context, gained)
+        return 0.0
+
+    def _save_ally_gain(self, state: GameState, context) -> float:
+        """Un Aliado se queda en mesa turno tras turno: vale más que una carta suelta."""
+        ally = context.ally
+        if ally is None:
+            return 0.0
+        gain = 1.5 * self._instance_value(ally)
+        # El último Defender es lo que impide que el daño llegue a la cara.
+        reactor = state.player(context.reactor)
+        if ally.card.is_defender and sum(1 for a in reactor.allies
+                                         if a.card.is_defender) == 1:
+            gain += 6.0
+        return gain
+
+    def _prevent_damage_gain(self, state: GameState, context, reduced: int) -> float:
+        subject = state.player(context.subject)
+        blocked = min(reduced, context.amount)
+        if blocked <= 0:
+            return 0.0
+        if context.reactor != context.subject:
+            # Cubrir a otro sólo tiene sentido en equipo, y sólo si le salva la vida.
+            if state.lord_ruler is None or context.amount < subject.health:
+                return 0.0
+            return 25.0 if blocked >= context.amount - subject.health + 1 else 0.0
+        if context.amount >= subject.health:
+            # Letal: si el bloqueo llega para sobrevivir, no hay nada que valga más.
+            return 40.0 if blocked > context.amount - subject.health else 3.0 * blocked
+        if subject.health - context.amount <= self.profile.panic_health:
+            return 3.0 * blocked
+        return 0.8 * blocked
+
+    def _deny_mission_gain(self, state: GameState, context, cut: int) -> float:
+        """Recortar al rival vale por lo que le impide cruzar, no por los puntos."""
+        subject = state.player(context.subject)
+        cut = min(cut, context.amount)
+        if cut <= 0:
+            return 0.0
+        gain = 1.0 * cut
+        for track in state.tracks:
+            if track.finisher is not None:
+                continue
+            position = track.position_of(subject.id)
+            with_points = position + context.amount
+            without = position + context.amount - cut
+            if with_points >= TRACK_LENGTH > without:
+                gain += 20.0          # le quita la corona de la pista
+            elif any(without < r.position <= with_points for r in track.mission.rewards):
+                gain += 4.0           # le quita una recompensa intermedia
+        return gain
 
 
 def make(name: str, seed: int | None = None) -> UtilityAgent:

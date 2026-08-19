@@ -9,10 +9,18 @@ from mistsim.domain.player import Player
 from mistsim.domain.state import GameState
 from mistsim.engine.choices import Chooser
 from mistsim.engine.events import EventLog
+from mistsim.engine.reactions import Trigger, offer
 
 
 def resolve_combat(state: GameState, attacker: Player, log: EventLog,
-                   chooser: Chooser) -> None:
+                   chooser: Chooser, agents: list | None = None) -> None:
+    """Reparte el daño acumulado.
+
+    `agents` habilita las reacciones fuera de turno (Cloud, y el Cloud de Hide). Si no
+    se pasa, el combate se resuelve sin ventana de reacción — es lo que hacen los tests
+    que construyen un combate a mano.
+    """
+    agents = agents or []
     pool = attacker.resources.combat
     if pool <= 0:
         return
@@ -22,13 +30,13 @@ def resolve_combat(state: GameState, attacker: Player, log: EventLog,
         attacker.resources.combat = pool
         return
 
-    pool = _attack_allies(state, attacker, pool, log, chooser)
-    _attack_players(state, attacker, pool, log, chooser)
+    pool = _attack_allies(state, attacker, pool, log, chooser, agents)
+    _attack_players(state, attacker, pool, log, chooser, agents)
     attacker.resources.combat = 0
 
 
 def _attack_allies(state: GameState, attacker: Player, pool: int, log: EventLog,
-                   chooser: Chooser) -> int:
+                   chooser: Chooser, agents: list) -> int:
     """Paso 3: matar Aliados. Los Defender deben caer antes que nada."""
     while pool > 0:
         killable = []
@@ -44,6 +52,14 @@ def _attack_allies(state: GameState, attacker: Player, pool: int, log: EventLog,
             break
         owner = next(o for o, a in killable if a is chosen)
         pool -= chosen.card.defense
+
+        # Hide: el dueño puede salvarlo. El daño se gasta igual (texto de la carta).
+        if offer(state, Trigger.ALLY_DOOMED, subject=owner.id,
+                 amount=chosen.card.defense, agents=agents, log=log, ally=chosen,
+                 reactors=[owner.id]):
+            log.emit("ally-saved", owner.id, ally=chosen.name, by=attacker.id)
+            continue
+
         owner.allies.remove(chosen)
         owner.discard.append(chosen)
         if chosen.card.ongoing == "extra_metal_burn":
@@ -54,7 +70,7 @@ def _attack_allies(state: GameState, attacker: Player, pool: int, log: EventLog,
 
 
 def _attack_players(state: GameState, attacker: Player, pool: int, log: EventLog,
-                    chooser: Chooser) -> None:
+                    chooser: Chooser, agents: list) -> None:
     """Paso 4: daño a jugadores.
 
     A 2 jugadores el ataque es opcional y libre. A 3-4, el daño restante DEBE ir a quien
@@ -70,7 +86,7 @@ def _attack_players(state: GameState, attacker: Player, pool: int, log: EventLog
         holder = state.player(state.target_holder)
         if holder.id == attacker.id or holder.eliminated or holder.has_defender():
             return
-        _damage_player(state, attacker, holder, pool, log)
+        _damage_player(state, attacker, holder, pool, log, agents)
         if not holder.eliminated:
             # El Objetivo sólo se mueve tras recibir daño de otro, y una vez gastado
             # todo el daño del turno.
@@ -83,12 +99,16 @@ def _attack_players(state: GameState, attacker: Player, pool: int, log: EventLog
         return
 
     victim_id = chooser.choose_player([p.id for p in targets], "attack-player")
-    _damage_player(state, attacker, state.player(victim_id), pool, log)
+    _damage_player(state, attacker, state.player(victim_id), pool, log, agents)
 
 
 def _damage_player(state: GameState, attacker: Player, victim: Player, amount: int,
-                   log: EventLog) -> None:
+                   log: EventLog, agents: list | None = None) -> None:
     reduction = sum(1 for a in victim.allies if a.card.ongoing == "reduce_damage_taken_by_1")
+    # Cloud: cualquiera puede reducir el daño entrante, a sí mismo o a otro.
+    if agents:
+        reduction += offer(state, Trigger.INCOMING_DAMAGE, subject=victim.id,
+                           amount=max(0, amount - reduction), agents=agents, log=log)
     dealt = max(0, amount - reduction)
     victim.take_damage(dealt)
     log.emit("damage", victim.id, amount=dealt, by=attacker.id, health=victim.health)

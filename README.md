@@ -140,33 +140,51 @@ cartas, y el personaje es un modificador.
 Liguilla de 12 partidas por emparejamiento (`mistsim tourney -n 12 -s 100`):
 
 ```
-recursion-hierro   65.0%      rampa-economica    50.8%
-tempo-seek         57.5%      muro-defender      49.2%
-aggro-combate      55.0%      motor-riot         48.3%
-adelgazar          52.5%      equilibrado        41.7%
-motor-robo         50.8%      combo-atium        40.0%
-                              rush-mision        39.2%
+aggro-combate      59.2%      equilibrado        48.3%
+recursion-hierro   57.5%      rush-mision        48.3%
+muro-defender      55.0%      adelgazar          46.7%
+tempo-seek         55.0%      motor-robo         44.2%
+motor-riot         51.7%      rampa-economica    43.3%
+                              combo-atium        40.8%
 ```
 
-> **Cifras obsoletas: se midieron con las Misiones homebrew.** La reconstrucción no tenía
-> ningún efecto permanente y las cartas reales conceden cuatro, así que el orden cambiará.
-> Basta `mistsim tourney -n 12 -s 100` (unos minutos) para actualizarlas. Lo mismo vale
-> para los resultados publicados en los PRs del optimizador, la minería de combos y el
-> solver.
+Medido con las Misiones reales y con la ventana de reacción ya en su sitio. El reparto se
+ha estrechado (antes 39,2%–65,0%) y `muro-defender` sube cinco puestos. Entre una tanda y
+otra cambiaron dos cosas a la vez —los datos de Misión y las reacciones—, así que el
+movimiento no puede atribuirse a una sola; para eso hace falta la re-medición del punto
+siguiente.
+
+> **Los números publicados en los PRs del optimizador, la minería de combos y el solver
+> siguen siendo anteriores a todo esto** (Misiones homebrew y sin reacciones). Hay que
+> re-ejecutarlos: ~1 hora cada uno.
 
 Estos números se han movido tres veces según se han ido corrigiendo fallos del motor. Es
 lo esperable mientras el motor madura, y por eso conviene re-medirlos tras cada cambio en
 vez de citar los de un README viejo.
 
-**Sobre el peso de las Misiones:** con los datos homebrew, el 84% de las partidas a 3
-jugadores terminaba por completar las tres Misiones (51% a 2, 96% a 4). Ese reparto se
-midió con recompensas más flojas que las reales, así que con los datos verificados la vía
-de Misión debería pesar aún más, no menos. Queda por medir.
+**Sobre el peso de las Misiones:** con los datos homebrew y sin ventana de reacción, el
+84% de las partidas a 3 jugadores terminaba por completar las tres Misiones (51% a 2, 96%
+a 4). Medido de nuevo con las Misiones reales **y** con SENSE ya funcionando (300 partidas
+por tamaño, `base_seed=7000`):
+
+| Jugadores | Misiones | Último en pie | Límite de turnos |
+|---|---|---|---|
+| 2 | 34% | 66% | — |
+| 3 | 73% | 25% | 2% |
+| 4 | 67% | 23% | 10% |
+
+La vía de Misión sigue siendo la dominante a 3-4 jugadores, pero ha dejado de ser casi la
+única: a 4 baja de 96% a 67% y aparece un 10% de partidas que llegan al límite de turnos.
+Otra vez cambiaron dos cosas a la vez, y no apuntan en el mismo sentido —las recompensas
+reales son mucho mejores que las homebrew, SENSE frena la carrera—, así que el neto no se
+puede repartir entre las dos sin medirlas por separado. Lo que sí se ve en la liguilla es
+que `rush-mision` deja de ser el peor arquetipo (era 39,2%, último) y pasa a la media
+(48,3%): con las recompensas reales la vía de Misión es competitiva aunque te recorten.
 
 ## Tests
 
 ```bash
-pytest          # 55 tests
+pytest          # 253 tests
 ruff check src tests scripts
 ```
 
@@ -176,10 +194,6 @@ mantiene en 0-40 y las monedas nunca son negativas.
 
 ## Huecos conocidos del motor
 
-- **No hay reacción fuera de turno.** Seis cartas tienen habilidad `off_turn` —tres
-  `Cloud` que reducen daño, una que protege a un Aliado y dos `Sense` que bloquean el
-  avance rival en una Misión— y el motor nunca las juega: no existe ventana de reacción
-  durante el turno ajeno. `mistsim cards` las muestra, pero en simulación no hacen nada.
 - **`repeat_own_top_ability`** (secundaria de Seeker) no está implementada: haría falta
   recordar el último objetivo de Seek dentro de la cadena.
 - **Las penalizaciones permanentes de Adversario** (`block_seek`, `block_pull`…) se
@@ -189,6 +203,23 @@ Ninguno de estos falla en silencio: emiten un evento `effect-unimplemented`, as�
 `log.of_kind("effect-unimplemented")` dice exactamente qué se está perdiendo en una
 partida dada. Un no-op callado es indistinguible de un efecto que funciona, y esa clase
 de fallo ya ha falseado este simulador varias veces.
+
+## Reacciones fuera de turno
+
+Seis cartas —Spy, Eavesdrop, Sneak, Train in Secret, Coppercloud y Hide— tienen su efecto
+**sólo** en `off_turn`. Hasta que hubo ventana de reacción no hacían literalmente nada, y
+con ellas dos de los ocho keywords de metal (`Sense` y `Cloud`) no ocurrían jamás: 9 de
+las 82 cartas físicas eran decorado.
+
+`engine/reactions.py` abre tres ventanas —gasto de Misión, daño entrante y Aliado a punto
+de caer— y `UtilityAgent.choose_reaction` decide cuándo gastar la carta. El listón importa:
+una reacción tira una carta de la mano sin llegar a jugarla, así que el coste es el hueco
+de mano más lo que la carta habría hecho en tu turno, no su valor de compra. Con el valor
+de compra a secas el agente reaccionaba a todo (5,5 reacciones por partida); con el coste
+bien puesto son 2,3, y las seis cartas siguen apareciendo.
+
+Al leer una partida, `sense-cut` es el recorte, `ally-saved` el Aliado que se libró y
+`mission-denied` un avance que se quedó sin puntos por el camino.
 
 ## Decisiones de reglas
 

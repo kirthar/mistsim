@@ -103,3 +103,53 @@ posición en la pista nunca retrocede.
 **Decisión:** el daño es un solo acumulador que se reparte al final del turno. Matar a un
 Aliado exige alcanzar o superar su Defensa **en un solo golpe**: no hay daño parcial ni se
 acumula entre turnos.
+
+## 12. Qué hace SENSE — manda la carta, no el manual
+
+`metals.json`, transcrito del manual, define el keyword así:
+
+> Stops other players from advancing on a Mission Track for the rest of that turn, even
+> if they gain more Mission points afterward.
+
+Las dos únicas cartas que llevan SENSE dicen otra cosa, y lo dicen sin ambigüedad:
+
+| Carta | Keyword | Texto impreso |
+|---|---|---|
+| Spy (62/82) | SENSE 3 | *Play off turn to reduce an opponent's ⟨misión⟩ by 3.* |
+| Eavesdrop | SENSE 2 | *Play off turn to reduce an opponent's ⟨misión⟩ by 2.* |
+
+Por el orden de precedencia del proyecto —**FAQ > imagen de la carta > manual**— manda la
+carta. **Decisión:** SENSE **recorta N puntos de Misión** del rival; no bloquea la pista.
+
+Consecuencias en el código: se elimina `MissionTrack.sensed` y los tres sitios que lo
+consultaban (`legal_actions`, `turn._advance_mission`, `solver.eligible_tracks`). Un
+avance que se queda sin puntos por una reacción emite `mission-denied` en vez de ser
+ilegal — la acción era legal cuando se eligió.
+
+Sigue valiendo lo de §10: SENSE no afecta al Lord Ruler.
+
+## 13. Las habilidades `off_turn` necesitan una ventana de reacción
+
+Seis cartas —Spy, Eavesdrop, Sneak, Train in Secret, Coppercloud y Hide— tienen su efecto
+SENSE o CLOUD **sólo** en `off_turn`: ninguna lo lleva en la primaria ni en la secundaria.
+Sin ventana de reacción no hacían nada en absoluto, y con ellas dos de los ocho keywords
+de metal no ocurrían jamás.
+
+**Decisión:** hay tres momentos en que se abre ventana (`engine/reactions.py`):
+
+| Disparador | Cuándo | Quién responde |
+|---|---|---|
+| `MISSION_SPENDING` | primer gasto de Misión del turno activo | los rivales, con SENSE |
+| `INCOMING_DAMAGE` | antes de aplicar daño a un jugador | cualquiera, con CLOUD |
+| `ALLY_DOOMED` | antes de retirar un Aliado alcanzado | su dueño, con Hide |
+
+Jugar una reacción **no exige quemar metal**: es la habilidad de fuera de turno de la
+carta, que sale de la mano al descarte de su dueño.
+
+Dos detalles del texto impreso que cambian el resultado:
+
+- Hide dice *"The attacking ⟨daño⟩ is still spent"*: salvar al Aliado **no** devuelve el
+  daño al atacante.
+- La ventana de SENSE se abre **una vez por turno**, en el primer intento de gastar. Es
+  el instante en que se ve lo que hay que recortar, y deja la mecánica acotada: repartir
+  los puntos entre tres pistas no puede costar tres ventanas.

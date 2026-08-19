@@ -685,10 +685,10 @@ def bound_is_admissible(state: GameState) -> bool:
 
 def eligible_tracks(state: GameState) -> list[tuple[int, MissionTrack]]:
     """Pistas en las que el jugador activo puede gastar puntos ahora mismo."""
-    player = state.player(state.active)
+    active = state.active
     return [
         (idx, track) for idx, track in enumerate(state.tracks)
-        if player.id not in track.sensed and track.finisher != player.id
+        if track.finisher != active
     ]
 
 

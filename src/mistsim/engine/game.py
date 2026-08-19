@@ -77,6 +77,9 @@ class Agent(Chooser):
     def choose_action(self, state: GameState, actions: list[Action]) -> Action:
         raise NotImplementedError
 
+    # `choose_reaction` lo hereda de Chooser: por defecto no se reacciona nunca, que es
+    # lo correcto para un agente que no tiene una política propia. Ver engine.reactions.
+
 
 class GameEngine:
     def __init__(self, content: Content | None = None, config: GameConfig | None = None,
@@ -87,8 +90,14 @@ class GameEngine:
         #: Pasar un EventLog con `keep` filtrado permite correr lotes grandes sin
         #: construir el log completo. Ver EventLog.STATS_KINDS.
         self.log = log if log is not None else EventLog()
+        #: Se rellena en `run()`; sin él no hay ventana de reacción.
+        self._agents: list[Agent] = []
 
     def run(self, agents: list[Agent], characters: list[str] | None = None) -> GameResult:
+        # Las reacciones fuera de turno las juegan los RIVALES del jugador activo, así
+        # que el turno necesita la lista entera, no sólo el agente de turno. Va en el
+        # motor y no en la firma de `_play_turn` para no romper a quien la sobrescribe.
+        self._agents = agents
         if characters is None:
             characters = self._pick_characters(len(agents))
         state = setup.new_game(self.content, self.config, characters, self.rng, self.log)
@@ -119,13 +128,13 @@ class GameEngine:
             action = agent.choose_action(state, actions)
             if action.kind is ActionKind.END_TURN:
                 break
-            turn.apply(state, action, self.log, agent)
+            turn.apply(state, action, self.log, agent, self._agents)
             if state.finished:
                 return
         else:
             self.log.emit("turn-truncated", player.id, reason="límite de acciones")
 
-        combat.resolve_combat(state, player, self.log, agent)
+        combat.resolve_combat(state, player, self.log, agent, self._agents)
         turn.end_turn(state, player, self.log)
 
     def _check_victory(self, state: GameState) -> None:

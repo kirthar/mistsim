@@ -51,8 +51,6 @@ class MissionTrack:
     first_claimed: set[int] = field(default_factory=set)
     #: Primer jugador en coronar la pista; cuenta como "el más alto" para siempre.
     finisher: int | None = None
-    #: Jugadores bloqueados este turno por un efecto Sense.
-    sensed: set[int] = field(default_factory=set)
 
     def position_of(self, player_id: int) -> int:
         return self.positions.get(player_id, 0)

@@ -118,7 +118,7 @@ def legal_actions(state: GameState) -> list[Action]:
     # Gastar puntos de misión. Se pueden repartir entre pistas o volcar todos en una.
     if player.resources.mission > 0:
         for idx, track in enumerate(state.tracks):
-            if player.id in track.sensed or track.finisher == player.id:
+            if track.finisher == player.id:
                 continue
             for amount in range(1, player.resources.mission + 1):
                 actions.append(Action(ActionKind.ADVANCE_MISSION, track=idx, amount=amount))

@@ -5,6 +5,7 @@ from mistsim.domain.cards import Ability, CardInstance
 from mistsim.domain.missions import TRACK_LENGTH
 from mistsim.domain.player import HAND_SIZE, Player
 from mistsim.domain.state import GameState
+from mistsim.engine import reactions
 from mistsim.engine.actions import Action, ActionKind
 from mistsim.engine.choices import Chooser
 from mistsim.engine.effects import EffectContext, resolve
@@ -22,13 +23,46 @@ def _ctx(state: GameState, log: EventLog, chooser: Chooser, source: str) -> Effe
     return EffectContext(state, state.player(state.active), log, chooser, source=source)
 
 
-def apply(state: GameState, action: Action, log: EventLog, chooser: Chooser) -> None:
-    """Aplica una acción legal al estado."""
+def apply(state: GameState, action: Action, log: EventLog, chooser: Chooser,
+          agents: list | None = None) -> None:
+    """Aplica una acción legal al estado.
+
+    `agents` sólo hace falta para abrir la ventana de reacción de Sense; sin él la acción
+    se resuelve sin reacciones, que es lo que quieren el solver (explora ramas a ciegas,
+    no conoce las manos rivales) y los tests que construyen un turno a mano.
+    """
     player = state.player(state.active)
     handler = _HANDLERS.get(action.kind)
     if handler is None:
         raise IllegalAction(f"acción no soportada: {action.kind}")
+    if agents and action.kind is ActionKind.ADVANCE_MISSION:
+        _open_sense_window(state, player, log, agents)
+        if player.resources.mission <= 0:
+            # La acción era legal cuando se eligió; la reacción la ha dejado sin objeto.
+            log.emit("mission-denied", player.id,
+                     track=state.tracks[action.track].mission.name)
+            return
     handler(state, player, action, log, chooser)
+
+
+def _open_sense_window(state: GameState, player: Player, log: EventLog,
+                       agents: list) -> None:
+    """Spy y Eavesdrop: los rivales recortan los puntos de Misión del jugador activo.
+
+    Se abre una sola vez por turno, en el primer intento de gastar. En mesa la reacción
+    puede jugarse en cualquier momento, pero éste es el instante en que se ve lo que hay
+    que recortar, y abrirla una vez la deja acotada: el pool sólo puede bajar, y
+    `_advance_mission` ya recorta la cantidad al pool que quede.
+    """
+    if "sense-window" in player.used_once_per_turn:
+        return
+    player.used_once_per_turn.add("sense-window")
+    cut = reactions.offer(state, reactions.Trigger.MISSION_SPENDING, subject=player.id,
+                          amount=player.resources.mission, agents=agents, log=log,
+                          reactors=[p.id for p in state.opponents(player.id)])
+    if cut:
+        player.resources.mission = max(0, player.resources.mission - cut)
+        log.emit("sense-cut", player.id, value=cut, left=player.resources.mission)
 
 
 # --- manejadores -------------------------------------------------------------
@@ -155,8 +189,6 @@ def _sell_boxing(state, player, action, log, chooser):
 
 def _advance_mission(state, player, action, log, chooser):
     track = state.tracks[action.track]
-    if player.id in track.sensed:
-        raise IllegalAction(f"Sense bloquea a P{player.id} en {track.mission.name}")
     amount = min(action.amount, player.resources.mission)
     if amount <= 0:
         raise IllegalAction("no hay puntos de misión que gastar")
@@ -273,6 +305,4 @@ def end_turn(state: GameState, player: Player, log: EventLog) -> None:
     if any(a.card.ongoing == "draw_extra_card_on_hand_draw" for a in player.allies):
         draw += 1
     player.draw(draw, state.rng)
-    for track in state.tracks:
-        track.sensed.clear()
     log.emit("turn-end", player.id, hand=len(player.hand), health=player.health)

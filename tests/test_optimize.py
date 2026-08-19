@@ -399,12 +399,17 @@ def test_optimizer_improves_over_its_initial_population_on_real_games():
     result = ga.run(fitness_fn, population_size=4, generations=2, elite=1, seed=1,
                     validate_fn=validate_fn)
 
-    # El elitismo garantiza que best_fitness de entrenamiento no baje entre
-    # generaciones (ver test_ga_elitism_never_regresses_training_best_fitness); aquí se
-    # comprueba además que todo el cableado real -- vector, perfil, gauntlet,
-    # run_batch, motor, y las bandas de semillas -- efectivamente produce números
-    # usables y que el resultado final viene de la validación, no del entrenamiento.
-    assert result.history[-1].best_fitness >= result.history[0].best_fitness
+    # Aquí NO se puede exigir que best_fitness suba de una generación a la siguiente:
+    # cada generación juega su propia banda de semillas (`training_seed(99, gen)`), así
+    # que hasta el elite se re-evalúa contra partidas distintas y su cifra puede bajar
+    # por muestreo. Esa es justamente la propiedad que fija
+    # `test_ga_reevaluates_every_individual_every_generation`, y la monotonía a señal
+    # constante ya la cubre `test_ga_elitism_never_regresses_training_best_fitness`.
+    # Lo que este test comprueba es el cableado real -- vector, perfil, gauntlet,
+    # run_batch, motor y bandas de semillas -- produciendo números usables, y que el
+    # resultado final sale de la validación y no del entrenamiento.
+    assert len(result.history) == 2
+    assert all(0.0 <= g.best_fitness <= 1.0 for g in result.history)
     assert all(g.validation_fitness is not None for g in result.history)
     assert 0.0 <= result.best.fitness <= 1.0
 

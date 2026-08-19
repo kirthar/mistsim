@@ -212,7 +212,6 @@ def _clone_track(track: MissionTrack) -> MissionTrack:
         claimed=set(track.claimed),
         first_claimed=set(track.first_claimed),
         finisher=track.finisher,
-        sensed=set(track.sensed),
     )
 
 
