@@ -30,6 +30,7 @@ TEMPLATES: dict[str, str] = {
     "mission-reward": "recompensa de {track} en {position}",
     "mission-first-bonus": "BONUS de primer jugador en {track}@{position}",
     "mission-completed": "COMPLETA la Misión {track}",
+    "permanent-gained": "gana permanente: {effect} +{value} (total {total})",
     "ally-killed": "mata a {ally} de P{owner}",
     "damage": "hace {amount} de daño a P{victim} (le queda {health})",
     "player-eliminated": "ELIMINA a P{victim}",

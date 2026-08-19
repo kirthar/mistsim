@@ -104,8 +104,32 @@ def test_homebrew_content_is_flagged_as_unverified(content):
     assert content.provenance["market_cards"] is True
     assert content.provenance["characters"] is True
     assert content.provenance["starter_deck"] is True
-    for gap in ("missions", "lord_ruler"):
-        assert content.provenance[gap] is False, gap
+    assert content.provenance["missions"] is True
+    # El mazo del Lord Ruler sigue sin transcribirse: es el único inventado que queda.
+    assert content.provenance["lord_ruler"] is False
+
+
+def test_all_eight_missions_come_from_the_photographed_cards(content):
+    """Las 8 tienen datos reales; ninguna queda como reconstrucción."""
+    assert len(content.missions) == 8
+    assert all(m.verified for m in content.missions), [
+        m.name for m in content.missions if not m.verified]
+
+
+def test_mission_rewards_sit_on_the_track(content):
+    """Casillas 1..11: la 12 es la cima, que tiene su propia recompensa aparte."""
+    for mission in content.missions:
+        posiciones = [r.position for r in mission.rewards]
+        assert posiciones == sorted(posiciones), f"{mission.name}: fuera de orden"
+        assert len(set(posiciones)) == len(posiciones), f"{mission.name}: repetidas"
+        for p in posiciones:
+            assert 1 <= p < 12, f"{mission.name}: casilla {p} fuera de la pista"
+
+
+def test_every_mission_has_a_top_reward_and_a_first_player_bonus(content):
+    for mission in content.missions:
+        assert mission.top_reward, mission.name
+        assert mission.top_reward_first_bonus, mission.name
 
 
 def test_validate_rejects_a_short_market(content):

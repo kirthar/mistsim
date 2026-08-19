@@ -36,8 +36,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
             print("  · las 8 cartas de Misión (valores numéricos de cada pista)")
         if "lord_ruler" in unverified:
             print("  · las 36 cartas del Lord Ruler (Adversarios y Edictos)")
-        print("\n  Hasta entonces, los resultados del modo Coop y el peso de las")
-        print("  Misiones en PvP no reflejan el juego real.")
+        print("\n  Hasta entonces, los resultados del modo Coop no reflejan el")
+        print("  juego real. El PvP sí: sus datos están todos verificados.")
     return 0
 
 

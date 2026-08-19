@@ -1,18 +1,78 @@
 {
   "_meta": {
-    "verified": false,
-    "source": "homebrew salvo Pits of Hathsin (parcial)",
-    "note": "HUECO DE DATOS. El juego trae 8 cartas de Misión y usa 3 al azar por partida. Sólo se conocen el nombre de las 8 y la anatomía completa de Pits of Hathsin (ejemplo del manual, p.14). Los valores numéricos de las otras 7 NO están publicados en ninguna fuente. Se han reconstruido a partir de las descripciones de la guía comunitaria de Zen, respetando su valoración relativa (S/A/B/C/D-tier), y calibrados sobre la única pista verificada.",
-    "structure": "Pista de 12 puntos. Recompensas intermedias de un solo uso, con un bonus extra para el primero que llega a cada una. Recompensa superior al coronar, más un bonus extra de un solo uso para el primero en coronarla.",
-    "action_item": "Fotografiar las 8 cartas de Misión para sustituir esto por datos reales."
+    "verified": true,
+    "source": "Fotografías de las 8 cartas físicas (edición en catalán), 2026-08. Efectos y bonus leídos de las imágenes; posiciones de pista contadas por el propietario sobre las cartas.",
+    "note": "Sustituye por completo a la reconstrucción homebrew anterior, que sólo conocía los nombres. Varias resultaron bastante más potentes de lo reconstruido: Skaa Caverns concede +1 quema de metal PERMANENTE, y Luthadel Garrison y Keep Venture dan +2 de combate y +2 monedas cada turno para siempre.",
+    "track": {
+      "length": 12,
+      "numbering": "de la salida (0, fuera de pista) hacia la cima (12)",
+      "structure": "Recompensas intermedias de un solo uso, cada una con un bonus extra para el primero que la alcanza. Al coronar, la recompensa superior (permanente o de un solo uso) más un bonus de un solo uso para el primero en llegar."
+    },
+    "naming": "Los nombres se conservan en inglés para no romper referencias previas; el título catalán de la carta va en `printed_name`."
   },
   "missions": [
     {
+      "name": "Skaa Caverns",
+      "printed_name": "Cavernes Skaa",
+      "card_number": "M1",
+      "verified": true,
+      "source": "foto",
+      "rewards": [
+        {"position": 5, "effects": {"refresh_metal": 1}, "first_player_bonus": {"refresh_metal": 1}},
+        {"position": 9, "effects": {"refresh_metal": 1}, "first_player_bonus": {"refresh_metal": 1}}
+      ],
+      "top_reward": {"permanent_burn_per_turn": 1},
+      "top_reward_first_bonus": {"refresh_all": true}
+    },
+    {
+      "name": "Luthadel Garrison",
+      "printed_name": "Guarnició de Luthadel",
+      "card_number": "M2",
+      "verified": true,
+      "source": "foto",
+      "note": "Único caso del juego en que el bonus de primer jugador no es una cantidad sino un efecto agresivo: derrotar un Aliado rival.",
+      "rewards": [
+        {"position": 4, "effects": {"combat": 1}, "first_player_bonus": {"kill_ally": 1}},
+        {"position": 7, "effects": {"combat": 2}, "first_player_bonus": {"kill_ally": 1}},
+        {"position": 10, "effects": {"combat": 3}, "first_player_bonus": {"kill_ally": 1}}
+      ],
+      "top_reward": {"permanent_combat_per_turn": 2},
+      "top_reward_first_bonus": {"combat": 1}
+    },
+    {
+      "name": "Keep Venture",
+      "printed_name": "Torrassa Venture",
+      "card_number": "M3",
+      "verified": true,
+      "source": "foto",
+      "rewards": [
+        {"position": 4, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}},
+        {"position": 6, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}},
+        {"position": 8, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}},
+        {"position": 10, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}}
+      ],
+      "top_reward": {"permanent_coin_per_turn": 2},
+      "top_reward_first_bonus": {"coin": 3}
+    },
+    {
+      "name": "Kredik Shaw",
+      "printed_name": "Kredik Shaw",
+      "card_number": "M4",
+      "verified": true,
+      "source": "foto",
+      "rewards": [
+        {"position": 3, "effects": {"draw": 1}, "first_player_bonus": {"draw": 1}},
+        {"position": 7, "effects": {"draw": 1}, "first_player_bonus": {"draw": 1}}
+      ],
+      "top_reward": {"permanent_draw_per_turn": 1},
+      "top_reward_first_bonus": {"draw": 2}
+    },
+    {
       "name": "Pits of Hathsin",
-      "verified": false,
-      "source": "manual p.14 (estructura verificada, valores parciales)",
-      "community_tier": "D",
-      "starting_bonus": {"atium": 1},
+      "printed_name": "Fossats de Hathsin",
+      "card_number": "M5",
+      "verified": true,
+      "source": "foto",
       "rewards": [
         {"position": 4, "effects": {"coin": 1}, "first_player_bonus": {"coin": 1}},
         {"position": 8, "effects": {"combat": 2}, "first_player_bonus": {"heal": 2}}
@@ -21,79 +81,41 @@
       "top_reward_first_bonus": {"atium": 1}
     },
     {
-      "name": "Canton Of Orthodoxy",
-      "verified": false, "source": "homebrew", "community_tier": "S",
-      "rewards": [
-        {"position": 3, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}},
-        {"position": 6, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}},
-        {"position": 9, "effects": {"soothe": 2}, "first_player_bonus": {"soothe": 1}}
-      ],
-      "top_reward": {"soothe": 2},
-      "top_reward_first_bonus": {"soothe": 3}
-    },
-    {
-      "name": "Keep Venture",
-      "verified": false, "source": "homebrew", "community_tier": "S",
-      "rewards": [
-        {"position": 2, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
-        {"position": 4, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
-        {"position": 6, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
-        {"position": 8, "effects": {"coin": 2}, "first_player_bonus": {"coin": 1}},
-        {"position": 10, "effects": {"coin": 3}, "first_player_bonus": {"coin": 1}}
-      ],
-      "top_reward": {"permanent_coin_per_turn": 2},
-      "top_reward_first_bonus": {"coin": 4}
-    },
-    {
-      "name": "Luthadel Garrison",
-      "verified": false, "source": "homebrew", "community_tier": "A",
-      "rewards": [
-        {"position": 4, "effects": {"combat": 2}, "first_player_bonus": {"destroy_adversary_shield": 1}},
-        {"position": 8, "effects": {"combat": 3}, "first_player_bonus": {"destroy_adversary_shield": 1}}
-      ],
-      "top_reward": {"combat": 4},
-      "top_reward_first_bonus": {"destroy_adversary_shield": 2}
-    },
-    {
-      "name": "Kredik Shaw",
-      "verified": false, "source": "homebrew", "community_tier": "A",
-      "rewards": [
-        {"position": 3, "effects": {"draw": 1}, "first_player_bonus": {"draw": 1}},
-        {"position": 7, "effects": {"draw": 2}, "first_player_bonus": {"draw": 1}}
-      ],
-      "top_reward": {"permanent_draw_per_turn": 1},
-      "top_reward_first_bonus": {"draw": 3}
-    },
-    {
       "name": "Luthadel Rooftops",
-      "verified": false, "source": "homebrew", "community_tier": "B",
+      "printed_name": "Teulades de Luthadel",
+      "card_number": "M6",
+      "verified": true,
+      "source": "foto",
       "rewards": [
-        {"position": 4, "effects": {"train": 1}, "first_player_bonus": {"train": 1}},
-        {"position": 8, "effects": {"train": 1}, "first_player_bonus": {"train": 1}}
+        {"position": 6, "effects": {"train": 1}, "first_player_bonus": {"train": 1}}
       ],
-      "top_reward": {"train": 2},
+      "top_reward": {"train": 1},
       "top_reward_first_bonus": {"train": 1}
     },
     {
-      "name": "Skaa Caverns",
-      "verified": false, "source": "homebrew", "community_tier": "B",
+      "name": "Crew Hideout",
+      "printed_name": "Amagatall de la Colla",
+      "card_number": "M7",
+      "verified": true,
+      "source": "foto",
       "rewards": [
-        {"position": 4, "effects": {"refresh_metal": 1}, "first_player_bonus": {"refresh_metal": 1}},
-        {"position": 8, "effects": {"refresh_metal": 2}, "first_player_bonus": {"heal": 3}}
+        {"position": 6, "effects": {"heal": 4}, "first_player_bonus": {"heal": 2}}
       ],
-      "top_reward": {"permanent_refresh_per_turn": 2},
-      "top_reward_first_bonus": {"atium": 1}
+      "top_reward": {"heal": 6},
+      "top_reward_first_bonus": {"heal": 2}
     },
     {
-      "name": "Crew Hideout",
-      "verified": false, "source": "homebrew", "community_tier": "C",
+      "name": "Canton of Orthodoxy",
+      "printed_name": "Cantó de l'Ortodòxia",
+      "card_number": "M8",
+      "verified": true,
+      "source": "foto",
       "rewards": [
-        {"position": 3, "effects": {"heal": 3}, "first_player_bonus": {"heal": 2}},
-        {"position": 6, "effects": {"heal": 4}, "first_player_bonus": {"heal": 2}},
-        {"position": 9, "effects": {"heal": 4}, "first_player_bonus": {"heal": 2}}
+        {"position": 5, "effects": {"soothe": 1}, "first_player_bonus": {"soothe": 1}},
+        {"position": 9, "effects": {"soothe": 1}, "first_player_bonus": {"soothe": 1}}
       ],
-      "top_reward": {"heal": 5},
-      "top_reward_first_bonus": {"heal": 4}
+      "top_reward": {"soothe": 4},
+      "top_reward_first_bonus": {"soothe": 1}
     }
   ]
 }

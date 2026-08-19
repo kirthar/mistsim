@@ -28,11 +28,26 @@ y el CLI avisa por stderr cuando una partida descansa en datos inventados.
 | 65 cartas de Mercado | **Verificado** carta a carta contra sus imágenes |
 | 5 personajes y sus habilidades de Nivel I | **Verificado** (datos del propietario del juego) |
 | Mazo inicial (4 Entrenamiento + 6 Financiación) | **Verificado** (datos del propietario) |
-| 8 cartas de Misión | **Homebrew** — sólo se conocen los nombres |
+| 8 cartas de Misión | **Verificado** carta a carta contra fotografías |
 | 36 cartas del Lord Ruler | **Homebrew** — ninguna transcrita |
 
-Sustituir el contenido homebrew por datos reales es editar `data/missions.json` y
-`data/lord_ruler.json`. El motor los consume igual: no hay que tocar código.
+Sustituir el contenido homebrew por datos reales es editar `data/lord_ruler.json`. El
+motor lo consume igual: no hay que tocar código. Así entraron las 8 Misiones.
+
+### Las Misiones reales resultaron mucho más potentes
+
+La reconstrucción homebrew sólo conocía los nombres, y se quedó corta. Las cartas reales
+conceden efectos **permanentes** que no había previsto:
+
+| Misión | Al coronarla |
+|---|---|
+| Skaa Caverns | **+1 quema de metal para siempre** — lo que la pista de Entrenamiento tarda toda la partida en dar |
+| Luthadel Garrison | +2 de combate **cada turno** |
+| Keep Venture | +2 monedas **cada turno** |
+| Kredik Shaw | +1 carta cada vez que robas mano |
+
+Luthadel Garrison trae además el único caso del juego en que el bonus de primer jugador no
+es una cantidad sino un efecto agresivo: **derrotar un Aliado rival**.
 
 ### Correcciones a la transcripción de partida
 
@@ -133,15 +148,20 @@ motor-robo         50.8%      combo-atium        40.0%
                               rush-mision        39.2%
 ```
 
-Sin estrategias dominantes ni muertas. **Estos números se han movido tres veces** según
-se han ido corrigiendo fallos del motor; es lo esperable mientras el motor madura, y
-por eso conviene re-medirlos tras cada corrección en vez de citar los de un README viejo.
+> **Cifras obsoletas: se midieron con las Misiones homebrew.** La reconstrucción no tenía
+> ningún efecto permanente y las cartas reales conceden cuatro, así que el orden cambiará.
+> Basta `mistsim tourney -n 12 -s 100` (unos minutos) para actualizarlas. Lo mismo vale
+> para los resultados publicados en los PRs del optimizador, la minería de combos y el
+> solver.
 
-**Aviso:** en batch a 3 jugadores el 84% de las partidas termina por completar las tres
-Misiones. Es consecuencia directa de que los valores de las Misiones son homebrew, así
-que ese número dice más de esa reconstrucción que del juego real. No se ha ajustado a
-ojo precisamente por eso: la calibración honesta llega cuando se fotografíen las 8
-cartas.
+Estos números se han movido tres veces según se han ido corrigiendo fallos del motor. Es
+lo esperable mientras el motor madura, y por eso conviene re-medirlos tras cada cambio en
+vez de citar los de un README viejo.
+
+**Sobre el peso de las Misiones:** con los datos homebrew, el 84% de las partidas a 3
+jugadores terminaba por completar las tres Misiones (51% a 2, 96% a 4). Ese reparto se
+midió con recompensas más flojas que las reales, así que con los datos verificados la vía
+de Misión debería pesar aún más, no menos. Queda por medir.
 
 ## Tests
 
