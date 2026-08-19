@@ -10,6 +10,8 @@ from mistsim.domain.metals import Metal, MetalTokens
 MAX_HEALTH = 40
 HAND_SIZE = 5
 TRAINING_STEPS = 8
+#: Pasos de Entrenamiento por cada quema extra: 8 pasos dan de 1 a 4 quemas.
+TRAINING_STEPS_PER_BURN = 3
 
 
 @dataclass
@@ -69,6 +71,8 @@ class Player:
 
     #: Efectos permanentes ganados de recompensas de Misión, p.ej. {"coin": 2}.
     permanents: dict[str, int] = field(default_factory=dict)
+    #: Penalizaciones al límite de quemas (Adversarios del Lord Ruler).
+    burn_limit_penalty: int = 0
 
     # ---- movimiento de cartas -------------------------------------------------
 
@@ -129,6 +133,21 @@ class Player:
         before = self.training
         self.training = min(TRAINING_STEPS, self.training + steps)
         return self.training - before
+
+    def recompute_burn_limit(self) -> int:
+        """El límite de quemas por turno, recompuesto de sus tres fuentes.
+
+        Se calcula en vez de acumularse porque las fuentes cambian de forma
+        independiente: la pista de Entrenamiento sube sola, los Aliados con
+        `extra_metal_burn` entran y mueren, y las Misiones conceden bonus permanentes.
+        Sumar sobre el valor anterior hacía que el avance de Entrenamiento pisara el
+        +1 de un Noble o de una Misión, y el bonus se perdía en silencio.
+        """
+        base = min(4, 1 + self.training // TRAINING_STEPS_PER_BURN)
+        allies = sum(1 for a in self.allies if a.card.ongoing == "extra_metal_burn")
+        permanent = self.permanents.get("burn", 0)
+        self.tokens.burn_limit = max(1, base + allies + permanent - self.burn_limit_penalty)
+        return self.tokens.burn_limit
 
     @property
     def metals_active_this_turn(self) -> set[Metal]:

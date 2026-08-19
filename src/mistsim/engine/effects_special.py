@@ -252,6 +252,34 @@ def _perm_refresh(ctx: EffectContext, value: int) -> None:
     _grant_permanent(ctx, "refresh", value)
 
 
+@effect("permanent_combat_per_turn")
+def _perm_combat(ctx: EffectContext, value: int) -> None:
+    """Guarnició de Luthadel: +N de combate al empezar cada turno, para siempre."""
+    _grant_permanent(ctx, "combat", value)
+
+
+@effect("permanent_burn_per_turn")
+def _perm_burn(ctx: EffectContext, value: int) -> None:
+    """Cavernes Skaa: +N al límite de quemas, para siempre.
+
+    No es un recurso que se cobre cada turno sino una subida del límite, así que se
+    concede una vez y `recompute_burn_limit` lo suma por encima de la pista de
+    Entrenamiento y de los Aliados.
+    """
+    _grant_permanent(ctx, "burn", value)
+    ctx.player.recompute_burn_limit()
+    ctx.log.emit("burn-limit", ctx.player.id, limit=ctx.player.tokens.burn_limit,
+                 source=ctx.source)
+
+
+@effect("refresh_all")
+def _refresh_all(ctx: EffectContext, value: Any) -> None:
+    """Bonus de primer jugador de Cavernes Skaa: desflarea todos los metales."""
+    for metal in ctx.player.tokens.flared():
+        ctx.player.tokens.refresh(metal)
+        ctx.log.emit("refresh", ctx.player.id, metal=str(metal), source=ctx.source)
+
+
 @effect("destroy_adversary_shield")
 def _destroy_shield(ctx: EffectContext, value: int) -> None:
     lr = ctx.state.lord_ruler
@@ -309,7 +337,8 @@ def _eliminate_from_hand(ctx: EffectContext, value: int) -> None:
 
 @effect("burn_limit_penalty")
 def _burn_penalty(ctx: EffectContext, value: int) -> None:
-    ctx.player.tokens.burn_limit = max(1, ctx.player.tokens.burn_limit - value)
+    ctx.player.burn_limit_penalty += value
+    ctx.player.recompute_burn_limit()
 
 
 @effect("collective_damage")

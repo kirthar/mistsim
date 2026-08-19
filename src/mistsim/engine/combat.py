@@ -47,7 +47,7 @@ def _attack_allies(state: GameState, attacker: Player, pool: int, log: EventLog,
         owner.allies.remove(chosen)
         owner.discard.append(chosen)
         if chosen.card.ongoing == "extra_metal_burn":
-            owner.tokens.burn_limit = max(1, owner.tokens.burn_limit - 1)
+            owner.recompute_burn_limit()
         log.emit("ally-killed", owner.id, ally=chosen.name, by=attacker.id,
                  cost=chosen.card.defense)
     return pool

@@ -43,7 +43,7 @@ def _play_card(state, player, action, log, chooser):
         player.allies.append(inst)
         log.emit("ally-played", player.id, ally=inst.name)
         if inst.card.ongoing == "extra_metal_burn":
-            player.tokens.burn_limit += 1
+            player.recompute_burn_limit()
     else:
         player.in_play.append(inst)
         log.emit("card-played", player.id, card=inst.name)
@@ -234,21 +234,41 @@ def start_turn(state: GameState, player: Player, log: EventLog) -> None:
         player.hand.append(card)
     player.set_aside.clear()
 
+    _apply_permanents(state, player, log)
+
+
+def _apply_permanents(state: GameState, player: Player, log: EventLog) -> None:
+    """Recompensas permanentes de Misión que rinden al principio de cada turno.
+
+    El robo extra no está aquí: se aplica en `end_turn`, que es cuando se roba la mano.
+    """
     if player.permanents.get("coin"):
         player.resources.coin += player.permanents["coin"]
+    if player.permanents.get("combat"):
+        player.resources.combat += player.permanents["combat"]
+    for _ in range(player.permanents.get("refresh", 0)):
+        flared = player.tokens.flared()
+        if not flared:
+            break
+        player.tokens.refresh(flared[0])
+        log.emit("refresh", player.id, metal=str(flared[0]), source="mission-permanent")
 
 
 def _apply_training_rewards(player: Player, log: EventLog) -> None:
-    """La pista de Entrenamiento sube el límite de quemas hasta 4 al final."""
-    limit = 1 + player.training // 3
-    if limit > player.tokens.burn_limit:
-        player.tokens.burn_limit = min(4, limit)
+    """La pista de Entrenamiento sube el límite de quemas hasta 4 al final.
+
+    Recompone el límite en vez de fijarlo, para no pisar los bonus de Aliado o de
+    Misión, que se suman por encima del tope de la pista.
+    """
+    before = player.tokens.burn_limit
+    if player.recompute_burn_limit() != before:
         log.emit("burn-limit", player.id, limit=player.tokens.burn_limit)
 
 
 def end_turn(state: GameState, player: Player, log: EventLog) -> None:
     """Pasos 5-6: descartar lo jugado y la mano, y robar 5 nuevas."""
     player.cleanup(state.rng)
+    # `permanents["draw"]` es Kredik Shaw: +1 carta cada vez que robas mano.
     draw = HAND_SIZE + player.permanents.get("draw", 0)
     if any(a.card.ongoing == "draw_extra_card_on_hand_draw" for a in player.allies):
         draw += 1

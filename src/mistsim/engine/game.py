@@ -4,7 +4,6 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-import mistsim.engine.effects_special  # noqa: F401  (registra los efectos especiales)
 from mistsim.content.loader import Content, load_content
 from mistsim.domain.state import GameConfig, GameState
 from mistsim.engine import combat, lord_ruler, setup, turn
